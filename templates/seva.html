@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}Seva & Daan Network — Hari Marg{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl px-4 sm:px-8 py-6">
+
+  <!-- PAGE HEADER STRIP -->
+  <div class="page-header-strip">
+    <h1 class="page-title" data-i18n="seva">🤲 Seva &amp; Daan Network</h1>
+    <p class="page-subtitle">Volunteer network for Warkaris — Free Annadan, Water, Medical Aid &amp; Shelter</p>
+  </div>
+
+  <div class="flex flex-col gap-8">
+
+    <!-- VOLUNTEER REGISTRATION FORM CARD -->
+    <div class="card p-6 sm:p-8">
+      <div class="mb-6 flex items-center gap-3">
+        <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary text-2xl text-accent">🤝</span>
+        <div>
+          <h2 class="font-serif text-xl font-bold text-accent">Offer Voluntary Seva / सेवा नोंदवा</h2>
+          <p class="font-sans text-xs text-muted-foreground">Register your organization or individual seva for Warkari pilgrims</p>
+        </div>
+      </div>
+
+      <form id="seva-form" onsubmit="submitSevaOffering(event)">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground" for="s_provider">Provider Name *</label>
+            <input type="text" id="s_provider" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="e.g. Shri Vitthal Annadan Kendra" required>
+          </div>
+
+          <div>
+            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground" for="s_contact">Contact Phone *</label>
+            <input type="tel" id="s_contact" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="e.g. 9876543210" required>
+          </div>
+
+          <div>
+            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground" for="s_type">Seva Category *</label>
+            <select id="s_type" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" required>
+              <option value="food">🍛 Food (Annadan)</option>
+              <option value="water">💧 Drinking Water &amp; ORS</option>
+              <option value="medical">🏥 Medical First Aid</option>
+              <option value="rest">🛏️ Rest &amp; Night Shelter</option>
+              <option value="sanitation">🚻 Sanitation / Bathing</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground" for="s_location">Location *</label>
+            <input type="text" id="s_location" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="e.g. Saswad Phata Main Road" required>
+          </div>
+        </div>
+
+        <div class="mb-6">
+          <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground" for="s_description">Short Description &amp; Capacity</label>
+          <input type="text" id="s_description" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="e.g. Free hot meals served daily for 500+ Warkaris">
+        </div>
+
+        <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-8 py-3.5 font-sans font-semibold text-primary-foreground shadow-md transition-all hover:brightness-105">
+          🙏 Submit Seva Offering / सेवा सादर करा
+        </button>
+      </form>
+
+      <div id="seva-msg" class="hidden mt-4 rounded-xl p-4 text-center font-sans text-sm font-semibold"></div>
+    </div>
+
+    <!-- ACTIVE SEVA POSTS SECTION -->
+    <div>
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 class="font-serif text-2xl font-bold text-accent">🚩 Active Seva Posts</h2>
+        <span class="rounded-full bg-primary/10 px-3.5 py-1 font-sans text-xs font-bold text-primary uppercase">FREE SEVA NETWORK</span>
+      </div>
+
+      <!-- Category Filter Row -->
+      <div class="filter-row flex items-center gap-2 overflow-x-auto pb-2 mb-6" id="seva-category-filters">
+        <button class="chip active rounded-full px-5 py-2.5 font-sans text-sm font-semibold transition-all" onclick="filterSevaCategory('all', this)">🔍 All</button>
+        <button class="chip rounded-full px-5 py-2.5 font-sans text-sm font-semibold transition-all" onclick="filterSevaCategory('food', this)">🍛 Annadan</button>
+        <button class="chip rounded-full px-5 py-2.5 font-sans text-sm font-semibold transition-all" onclick="filterSevaCategory('water', this)">💧 Water</button>
+        <button class="chip rounded-full px-5 py-2.5 font-sans text-sm font-semibold transition-all" onclick="filterSevaCategory('medical', this)">🏥 Medical</button>
+        <button class="chip rounded-full px-5 py-2.5 font-sans text-sm font-semibold transition-all" onclick="filterSevaCategory('rest', this)">🛏️ Shelter</button>
+      </div>
+
+      <!-- Seva List Grid (3 cols on desktop) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="seva-list">
+        <div class="col-span-full py-12 text-center text-muted-foreground">
+          <span class="loading-spinner">Loading active seva offerings...</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let allSevaData = [];
+  let currentSevaCategory = 'all';
+
+  async function submitSevaOffering(e) {
+    e.preventDefault();
+    const data = {
+      provider_name: document.getElementById('s_provider').value.trim(),
+      contact:       document.getElementById('s_contact').value.trim(),
+      type:          document.getElementById('s_type').value,
+      location_name: document.getElementById('s_location').value.trim(),
+      description:   document.getElementById('s_description').value.trim()
+    };
+
+    if (!data.provider_name || !data.contact) return;
+
+    const msgBox = document.getElementById('seva-msg');
+    try {
+      HariMarg.showToast('Submitting seva offering...');
+      const res = await fetch('/api/submit_seva', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const result = await res.json();
+      msgBox.classList.remove('hidden');
+      msgBox.classList.add('bg-emerald-500/10', 'text-emerald-700');
+      msgBox.textContent = result.message || 'Seva offering submitted successfully!';
+      document.getElementById('seva-form').reset();
+      loadSeva();
+    } catch(err) {
+      msgBox.classList.remove('hidden');
+      msgBox.classList.add('bg-destructive/10', 'text-destructive');
+      msgBox.textContent = 'Error submitting seva offering.';
+    }
+  }
+
+  async function loadSeva() {
+    const list = document.getElementById('seva-list');
+    let userLat = localStorage.getItem('hm_user_lat') || 18.3419;
+    let userLng = localStorage.getItem('hm_user_lng') || 74.0198;
+
+    try {
+      const res = await fetch(`/api/seva?lat=${userLat}&lng=${userLng}`);
+      const data = await res.json();
+      allSevaData = data.sevas || [];
+      renderSevaList();
+    } catch(err) {
+      list.innerHTML = '<div class="col-span-full py-12 text-center text-muted-foreground">Could not load seva offerings.</div>';
+    }
+  }
+
+  function filterSevaCategory(cat, chipEl) {
+    currentSevaCategory = cat;
+    document.querySelectorAll('#seva-category-filters .chip').forEach(c => c.classList.remove('active', 'bg-primary', 'text-primary-foreground'));
+    if (chipEl) chipEl.classList.add('active', 'bg-primary', 'text-primary-foreground');
+    renderSevaList();
+  }
+
+  function renderSevaPosts(posts, lang) {
+    const sevaTypeIcons = {
+      food:       { emoji: '🍛', bg: 'bg-primary/10 text-primary', label: 'Annadan / Food' },
+      water:      { emoji: '💧', bg: 'bg-sky-500/10 text-sky-600',  label: 'Drinking Water' },
+      medical:    { emoji: '🏥', bg: 'bg-destructive/10 text-destructive', label: 'Medical Aid' },
+      rest:       { emoji: '🛏️', bg: 'bg-emerald-500/10 text-emerald-600', label: 'Shelter & Rest' },
+      sanitation: { emoji: '🚻', bg: 'bg-amber-500/10 text-amber-600', label: 'Sanitation' }
+    };
+
+    return posts.map(p => {
+      const cfg = sevaTypeIcons[p.seva_type] || { emoji: '🙏', bg: 'bg-primary/10 text-primary', label: p.seva_type };
+      const provider = lang === 'mr' ? (p.provider_mr || p.provider_name) : p.provider_name;
+      return `
+        <div class="card flex flex-col justify-between p-6 transition-all hover:-translate-y-1 hover:shadow-xl">
+          <div>
+            <div class="mb-3 flex items-start gap-3">
+              <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${cfg.bg} text-2xl">
+                ${cfg.emoji}
+              </span>
+              <div class="min-w-0 flex-1">
+                <h3 class="font-serif text-lg font-bold text-accent truncate">${provider}</h3>
+                <span class="font-sans text-xs font-semibold text-primary">${cfg.label}</span>
+              </div>
+            </div>
+            <p class="mb-4 font-sans text-sm text-muted-foreground line-clamp-3">${p.description || ''}</p>
+          </div>
+
+          <div>
+            <div class="mb-4 flex flex-wrap items-center gap-2">
+              <span class="rounded-full border border-border bg-secondary px-3 py-1 font-sans text-xs font-semibold text-accent">📍 ${p.location || 'On Route'}</span>
+            </div>
+
+            <div class="flex gap-2 pt-2 border-t border-border/60">
+              ${p.contact ? `<a href="tel:${p.contact}" class="flex-1 inline-flex items-center justify-center gap-1 rounded-full bg-primary px-4 py-2 font-sans text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-105">📞 Call</a>` : ''}
+              <button class="inline-flex items-center justify-center rounded-full border border-accent/30 bg-secondary px-4 py-2 font-sans text-xs font-semibold text-accent transition-colors hover:bg-primary hover:text-white" onclick="HariMarg.speak('${(provider).replace(/'/g,"\\'")} ${cfg.label}', '${lang}')">🔊 Listen</button>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderSevaList() {
+    const list = document.getElementById('seva-list');
+    let filtered = allSevaData;
+    if (currentSevaCategory !== 'all') {
+      filtered = allSevaData.filter(s => (s.type || '').toLowerCase().includes(currentSevaCategory));
+    }
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<div class="col-span-full py-12 text-center text-muted-foreground">No active seva posts found for this category.</div>';
+      return;
+    }
+
+    const normalised = filtered.map(s => ({
+      seva_type:     (s.type || '').toLowerCase(),
+      provider_name: s.provider_name,
+      provider_mr:   s.provider_name_mr || null,
+      description:   s.description || 'Free voluntary service for all Warkari pilgrims.',
+      location:      s.location_name || s.distance_text || 'On Route',
+      capacity:      s.capacity || null,
+      contact:       s.contact || null
+    }));
+
+    const lang = (typeof HariMarg !== 'undefined' && HariMarg.lang) ? HariMarg.lang : 'en';
+    list.innerHTML = renderSevaPosts(normalised, lang);
+  }
+
+  document.addEventListener('DOMContentLoaded', loadSeva);
+</script>
+{% endblock %}

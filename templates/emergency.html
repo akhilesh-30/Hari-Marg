@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}AI Emergency — Hari Marg{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl px-4 sm:px-8 py-6">
+
+  <!-- PAGE HEADER STRIP -->
+  <div class="page-header-strip" style="background: linear-gradient(135deg, #C0392B 0%, #E8703A 60%, #F39C12 100%) !important;">
+    <h1 class="page-title" data-i18n="emergency">🚨 AI Emergency Guidance</h1>
+    <p class="page-subtitle">Instant 1-tap protocols for Wari heatstroke, dehydration & storms</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- LEFT COLUMN: AMBULANCE & TRIGGER CARDS (1 col on desktop) -->
+    <div class="flex flex-col gap-6">
+      
+      <!-- AMBULANCE BANNER CARD -->
+      <div class="card p-6 border-l-4 border-destructive bg-destructive/5 flex items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-3xl">🚑</span>
+          <div>
+            <h2 class="font-serif text-xl font-bold text-destructive">Ambulance: 108</h2>
+            <p class="font-sans text-xs text-muted-foreground">Police: 100 &bull; Wari Helpline: 1800-233-4567</p>
+          </div>
+        </div>
+        <a href="tel:108" class="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-destructive px-5 py-2.5 font-sans font-semibold text-white shadow-md transition-all hover:brightness-110">
+          📞 Call 108
+        </a>
+      </div>
+
+      <!-- SELECT EMERGENCY TRIGGERS -->
+      <div class="card p-6">
+        <h2 class="mb-4 font-serif text-lg font-bold text-accent">Select Emergency Situation:</h2>
+        <div class="grid grid-cols-2 gap-3">
+          <button class="emergency-trigger-card danger-theme flex flex-col items-center justify-center p-4 rounded-2xl border border-border bg-card hover:border-destructive transition-all" onclick="loadEmergencyTips('heatstroke', this)" type="button">
+            <span class="text-3xl mb-1">☀️</span>
+            <span class="font-sans text-sm font-bold text-foreground">Heatstroke</span>
+            <span class="font-sans text-xs text-muted-foreground">उष्णता</span>
+          </button>
+
+          <button class="emergency-trigger-card warning-theme flex flex-col items-center justify-center p-4 rounded-2xl border border-border bg-card hover:border-amber-500 transition-all" onclick="loadEmergencyTips('dehydration', this)" type="button">
+            <span class="text-3xl mb-1">💧</span>
+            <span class="font-sans text-sm font-bold text-foreground">Dehydration</span>
+            <span class="font-sans text-xs text-muted-foreground">निर्जलीकरण</span>
+          </button>
+
+          <button class="emergency-trigger-card warning-theme flex flex-col items-center justify-center p-4 rounded-2xl border border-border bg-card hover:border-amber-500 transition-all" onclick="loadEmergencyTips('fatigue', this)" type="button">
+            <span class="text-3xl mb-1">🦵</span>
+            <span class="font-sans text-sm font-bold text-foreground">Fatigue & Blisters</span>
+            <span class="font-sans text-xs text-muted-foreground">थकवा</span>
+          </button>
+
+          <button class="emergency-trigger-card danger-theme flex flex-col items-center justify-center p-4 rounded-2xl border border-border bg-card hover:border-destructive transition-all" onclick="loadEmergencyTips('weather_hazard', this)" type="button">
+            <span class="text-3xl mb-1">⛈️</span>
+            <span class="font-sans text-sm font-bold text-foreground">Severe Weather</span>
+            <span class="font-sans text-xs text-muted-foreground">वादळ</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: EMERGENCY TIPS BOX (2 cols on desktop) -->
+    <div class="lg:col-span-2">
+      <div class="card p-6 sm:p-8 flex flex-col justify-between h-full">
+        <div>
+          <div class="mb-4 flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-border">
+            <h2 id="tips-trigger-title" class="font-serif text-2xl font-bold text-accent">Loading guidance…</h2>
+            <span id="tips-source-tag" class="rounded-full bg-primary/10 px-3.5 py-1 font-sans text-xs font-bold text-primary uppercase">⚡ INSTANT PROTOCOL</span>
+          </div>
+
+          <div id="tips-list-container" class="my-4 flex flex-col gap-3 min-h-[220px]">
+            <span class="loading-spinner">Generating safety tips…</span>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-4 pt-4 border-t border-border/70">
+          <button class="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 font-sans font-semibold text-primary-foreground shadow-md transition-all hover:brightness-105" onclick="speakCurrentTips()" type="button">
+            🔊 Listen Tips Audio
+          </button>
+          <a href="/near_me" class="flex-1 inline-flex items-center justify-center gap-2 rounded-full border border-accent/30 bg-secondary px-6 py-3.5 font-sans font-semibold text-accent transition-colors hover:bg-primary hover:text-white">
+            🏥 Find Nearest Medical Camp
+          </a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentTipsText = '';
+
+async function loadEmergencyTips(triggerKey, cardEl) {
+  document.querySelectorAll('.emergency-trigger-card').forEach(c => c.classList.remove('border-primary', 'shadow-md'));
+  if (cardEl) cardEl.classList.add('border-primary', 'shadow-md');
+
+  const container = document.getElementById('tips-list-container');
+  const titleEl   = document.getElementById('tips-trigger-title');
+  const lang      = HariMarg.lang || 'en';
+
+  container.innerHTML = '<div class="py-8 text-center text-muted-foreground"><span class="loading-spinner">Generating quick safety tips...</span></div>';
+
+  let userLat = localStorage.getItem('hm_user_lat') || 18.5204;
+  let userLng = localStorage.getItem('hm_user_lng') || 73.8567;
+
+  try {
+    const res  = await fetch(`/api/emergency-tips?trigger=${triggerKey}&lang=${lang}&lat=${userLat}&lng=${userLng}`);
+    const data = await res.json();
+
+    titleEl.textContent = `${data.label} Protocol`;
+    document.getElementById('tips-source-tag').textContent =
+      data.source === 'ai' ? '🤖 AI REAL-TIME' : '⚡ INSTANT';
+
+    if (data.tips && data.tips.length > 0) {
+      currentTipsText = data.tips.join('. ');
+      container.innerHTML = data.tips.map((tip, i) => `
+        <div class="flex items-start gap-4 rounded-2xl border border-border bg-secondary/30 p-4 transition-all hover:bg-secondary/60">
+          <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent font-sans font-bold text-accent-foreground text-sm">${i + 1}</span>
+          <p class="font-sans text-base font-medium text-foreground leading-relaxed pt-0.5">${tip}</p>
+        </div>`).join('');
+    }
+  } catch (err) {
+    container.innerHTML = `
+      <div class="flex items-start gap-4 rounded-2xl border border-border bg-secondary/30 p-4"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent font-sans font-bold text-accent-foreground text-sm">1</span><p class="font-sans text-base font-medium text-foreground">Move to shade immediately — do not continue walking.</p></div>
+      <div class="flex items-start gap-4 rounded-2xl border border-border bg-secondary/30 p-4"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent font-sans font-bold text-accent-foreground text-sm">2</span><p class="font-sans text-base font-medium text-foreground">Sip water slowly with ORS — do not gulp large amounts.</p></div>
+      <div class="flex items-start gap-4 rounded-2xl border border-border bg-secondary/30 p-4"><span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent font-sans font-bold text-accent-foreground text-sm">3</span><p class="font-sans text-base font-medium text-foreground">Apply wet cloth to forehead, neck, and wrists.</p></div>`;
+  }
+}
+
+function speakCurrentTips() {
+  if (currentTipsText) HariMarg.speak(currentTipsText, HariMarg.lang || 'en');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadEmergencyTips('heatstroke', null);
+});
+</script>
+{% endblock %}

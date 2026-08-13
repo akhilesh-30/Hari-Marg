@@ -1,0 +1,441 @@
+{% extends "base.html" %}
+{% block title %}Hari Marg — Palkhi Tracking{% endblock %}
+
+{% block content %}
+<h2 class="page-title" data-i18n="palkhi_tracker">Palkhi Tracking</h2>
+<p class="page-subtitle">Track Dindi groups on their sacred journey to Pandharpur</p>
+
+<!-- Map for Palkhi Tracking -->
+<div class="map-container" id="palkhi-map-wrapper" style="height: 320px; min-height: 280px;">
+  <div id="palkhi-map" style="width:100%; height:100%;"></div>
+</div>
+
+<!-- Dindi Status Card (shown when user clicks a dindi) -->
+<div class="dindi-detail-card" id="dindi-detail-card" style="display:none;">
+  <div class="dindi-detail-header">
+    <div class="dindi-detail-status-dot" id="dindi-detail-dot"></div>
+    <div>
+      <div class="dindi-detail-name" id="dindi-detail-name"></div>
+      <div class="dindi-detail-subtitle" id="dindi-detail-subtitle"></div>
+    </div>
+    <button class="dindi-detail-close" onclick="closeDindiDetail()" aria-label="Close">&times;</button>
+  </div>
+  <div class="dindi-detail-body">
+    <div class="dindi-detail-grid">
+      <div class="dindi-stat">
+        <div class="dindi-stat-icon">📍</div>
+        <div class="dindi-stat-label">Current Halt</div>
+        <div class="dindi-stat-value" id="dindi-detail-halt"></div>
+      </div>
+      <div class="dindi-stat">
+        <div class="dindi-stat-icon">🎯</div>
+        <div class="dindi-stat-label">Next Stop</div>
+        <div class="dindi-stat-value" id="dindi-detail-next"></div>
+      </div>
+      <div class="dindi-stat">
+        <div class="dindi-stat-icon">📅</div>
+        <div class="dindi-stat-label">Day</div>
+        <div class="dindi-stat-value" id="dindi-detail-day"></div>
+      </div>
+      <div class="dindi-stat">
+        <div class="dindi-stat-icon">👥</div>
+        <div class="dindi-stat-label">Members</div>
+        <div class="dindi-stat-value" id="dindi-detail-members"></div>
+      </div>
+    </div>
+    <div class="dindi-detail-status-bar" id="dindi-detail-status-text"></div>
+    <div style="display:flex; gap:8px; margin-top:12px;">
+      <button class="btn btn-sm btn-ghost" style="flex:1;" onclick="speakDindiStatus()">
+        🔊 Listen
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Filter: Status -->
+<div class="filter-row" id="dindi-filters" style="margin-top: 16px;">
+  <button class="chip active" data-filter="all" onclick="setDindiFilter('all', this)">📋 All Dindis</button>
+  <button class="chip" data-filter="moving" onclick="setDindiFilter('moving', this)">🚶 Moving</button>
+  <button class="chip" data-filter="halt" onclick="setDindiFilter('halt', this)">⏸️ Halted</button>
+  <button class="chip" data-filter="break" onclick="setDindiFilter('break', this)">☕ Break</button>
+</div>
+
+<!-- Dindi List -->
+<div class="dindi-list" id="dindi-list">
+  <div class="loading-spinner">Loading dindi groups...</div>
+</div>
+
+<!-- Explore Nearby Palkhis Section -->
+<div class="nearby-palkhis-section" id="nearby-palkhis-section">
+  <div class="section-header">
+    <h3 style="font-family: var(--font-display); color: var(--accent); margin: 0;">
+      🧭 Explore Nearby Palkhis
+    </h3>
+    <div style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px;">
+      Dindis within <select id="radius-select" onchange="loadNearbyPalkhis()" style="background:var(--bg-input); border:1px solid rgba(232,112,58,0.2); border-radius:6px; padding:3px 8px; font-family:var(--font-body); color:var(--text); font-weight:600;">
+        <option value="25">25 km</option>
+        <option value="50" selected>50 km</option>
+        <option value="100">100 km</option>
+        <option value="200">200 km</option>
+      </select> of your location
+    </div>
+  </div>
+
+  <div class="nearby-palkhis-grid" id="nearby-palkhis-list">
+    <div class="loading-spinner" id="nearby-loading">Scanning for nearby dindis...</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script>
+  // ---- STATE ----
+  let palkhiMap = null;
+  let dindiMarkers = {};
+  let allDindis = [];
+  let currentFilter = 'all';
+  let selectedDindi = null;
+  let userLat = null, userLng = null;
+
+  const statusConfig = {
+    moving:  { emoji: '🚶', label: 'Moving',  color: '#2E8B57', bg: 'rgba(46,139,87,0.12)' },
+    halt:    { emoji: '⏸️', label: 'Halted',  color: '#E8703A', bg: 'rgba(232,112,58,0.12)' },
+    break:   { emoji: '☕', label: 'Break',   color: '#2980B9', bg: 'rgba(41,128,185,0.12)' },
+  };
+
+  // ---- INIT MAP ----
+  function initPalkhiMap() {
+    palkhiMap = L.map('palkhi-map', {
+      center: [18.2, 74.1],
+      zoom: 9,
+      minZoom: 7,
+      maxZoom: 16,
+      zoomControl: false,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    }).addTo(palkhiMap);
+
+    L.control.zoom({ position: 'topright' }).addTo(palkhiMap);
+  }
+
+  // ---- CREATE DINDI MARKER ----
+  function createDindiIcon(dindi) {
+    const cfg = statusConfig[dindi.status] || statusConfig.halt;
+    const isMoving = dindi.status === 'moving';
+    return L.divIcon({
+      html: `<div style="
+        width: 44px; height: 44px;
+        display: flex; align-items: center; justify-content: center;
+        background: white;
+        border: 3px solid ${dindi.color || cfg.color};
+        border-radius: 50%;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.2);
+        font-size: 1.4rem;
+        ${isMoving ? 'animation: bounce-marker 1.5s ease-in-out infinite;' : ''}
+      ">${cfg.emoji}</div>`,
+      className: '',
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+      popupAnchor: [0, -24],
+    });
+  }
+
+  // ---- LOAD ALL DINDIS ----
+  async function loadDindis() {
+    try {
+      let url = '/api/dindis';
+      if (userLat && userLng) {
+        url += `?lat=${userLat}&lng=${userLng}`;
+      }
+      const res = await fetch(url);
+      const data = await res.json();
+      allDindis = data.dindis || [];
+      renderDindiList();
+      renderDindiMarkers();
+    } catch (err) {
+      console.error('Error loading dindis:', err);
+      document.getElementById('dindi-list').innerHTML =
+        '<div class="empty-state"><div class="es-icon">😔</div><div class="es-text">Could not load dindi data.</div></div>';
+    }
+  }
+
+  // ---- RENDER DINDI LIST ----
+  function renderDindiList() {
+    const list = document.getElementById('dindi-list');
+    const lang = HariMarg.lang || 'en';
+    let filtered = allDindis;
+
+    if (currentFilter !== 'all') {
+      filtered = allDindis.filter(d => d.status === currentFilter);
+    }
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="es-icon">🚩</div><div class="es-text">No dindis found with this status.</div></div>';
+      return;
+    }
+
+    list.innerHTML = filtered.map(d => {
+      const cfg = statusConfig[d.status] || statusConfig.halt;
+      const name = lang === 'mr' ? d.name_mr : d.name;
+      const halt = lang === 'mr' ? d.current_halt_mr : d.current_halt;
+      const statusLabel = lang === 'mr' ? d.status_label_mr : d.status_label;
+      const distText = d.distance_text ? `<span class="dindi-dist">📏 ${d.distance_text}</span>` : '';
+
+      return `
+        <div class="dindi-card ${selectedDindi === d.id ? 'selected' : ''}"
+             onclick="selectDindi('${d.id}')" id="dindi-card-${d.id}">
+          <div class="dindi-card-left">
+            <div class="dindi-card-avatar" style="background:${cfg.bg}; border-color:${d.color || cfg.color};">
+              ${cfg.emoji}
+            </div>
+            <div class="dindi-card-info">
+              <div class="dindi-card-name">${name}</div>
+              <div class="dindi-card-location">📍 ${halt} · Day ${d.day}</div>
+              <div class="dindi-card-status" style="color:${cfg.color};">
+                ${cfg.emoji} ${cfg.label}
+                ${distText}
+              </div>
+            </div>
+          </div>
+          <div class="dindi-card-arrow">
+            <span style="color:${d.color || cfg.color}; font-size:1.2rem;">▸</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ---- RENDER MARKERS ON MAP ----
+  function renderDindiMarkers() {
+    // Clear existing markers
+    Object.values(dindiMarkers).forEach(m => palkhiMap.removeLayer(m));
+    dindiMarkers = {};
+
+    const lang = HariMarg.lang || 'en';
+    allDindis.forEach(d => {
+      const marker = L.marker([d.lat, d.lng], {
+        icon: createDindiIcon(d),
+      }).addTo(palkhiMap);
+
+      const name = lang === 'mr' ? d.name_mr : d.name;
+      const halt = lang === 'mr' ? d.current_halt_mr : d.current_halt;
+      const cfg = statusConfig[d.status] || statusConfig.halt;
+
+      marker.bindPopup(`
+        <div style="font-family:'Mukta',sans-serif; text-align:center; min-width:140px;">
+          <strong style="color:#8B2E1F; font-size:0.95rem;">${name}</strong><br>
+          <span style="font-size:0.8rem; color:#7A5C46;">📍 ${halt} · ${cfg.label}</span><br>
+          <span style="font-size:0.75rem; color:${cfg.color}; font-weight:600;">${cfg.emoji} ${cfg.label}</span>
+        </div>
+      `);
+
+      marker.on('click', () => selectDindi(d.id));
+      dindiMarkers[d.id] = marker;
+    });
+
+    // Fit to all markers
+    if (allDindis.length > 0) {
+      const coords = allDindis.map(d => [d.lat, d.lng]);
+      palkhiMap.fitBounds(coords, { padding: [30, 30] });
+    }
+  }
+
+  // ---- SELECT DINDI ----
+  function selectDindi(dindiId) {
+    const d = allDindis.find(x => x.id === dindiId);
+    if (!d) return;
+
+    selectedDindi = dindiId;
+    const lang = HariMarg.lang || 'en';
+    const cfg = statusConfig[d.status] || statusConfig.halt;
+
+    // Pan map
+    palkhiMap.flyTo([d.lat, d.lng], 12, { duration: 0.8 });
+
+    // Open popup
+    if (dindiMarkers[dindiId]) {
+      dindiMarkers[dindiId].openPopup();
+    }
+
+    // Show detail card
+    const card = document.getElementById('dindi-detail-card');
+    card.style.display = 'block';
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    document.getElementById('dindi-detail-name').textContent = lang === 'mr' ? d.name_mr : d.name;
+    document.getElementById('dindi-detail-subtitle').textContent =
+      `${lang === 'mr' ? 'नेता' : 'Leader'}: ${lang === 'mr' ? d.leader_mr : d.leader} · ${d.members} ${lang === 'mr' ? 'सदस्य' : 'members'}`;
+    document.getElementById('dindi-detail-halt').textContent = lang === 'mr' ? d.current_halt_mr : d.current_halt;
+    document.getElementById('dindi-detail-next').textContent = lang === 'mr' ? d.next_destination_mr : d.next_destination;
+    document.getElementById('dindi-detail-day').textContent = `Day ${d.day}`;
+    document.getElementById('dindi-detail-members').textContent = d.members;
+    document.getElementById('dindi-detail-status-text').textContent = lang === 'mr' ? d.status_label_mr : d.status_label;
+    document.getElementById('dindi-detail-status-text').style.background = cfg.bg;
+    document.getElementById('dindi-detail-status-text').style.color = cfg.color;
+
+    const dot = document.getElementById('dindi-detail-dot');
+    dot.style.background = cfg.color;
+    dot.className = `dindi-detail-status-dot ${d.status === 'moving' ? 'moving' : ''}`;
+
+    // Highlight card in list
+    document.querySelectorAll('.dindi-card').forEach(c => c.classList.remove('selected'));
+    const listCard = document.getElementById(`dindi-card-${dindiId}`);
+    if (listCard) listCard.classList.add('selected');
+  }
+
+  function closeDindiDetail() {
+    document.getElementById('dindi-detail-card').style.display = 'none';
+    selectedDindi = null;
+    document.querySelectorAll('.dindi-card').forEach(c => c.classList.remove('selected'));
+    // Reset map view
+    if (allDindis.length > 0) {
+      const coords = allDindis.map(d => [d.lat, d.lng]);
+      palkhiMap.fitBounds(coords, { padding: [30, 30] });
+    }
+  }
+
+  function speakDindiStatus() {
+    const d = allDindis.find(x => x.id === selectedDindi);
+    if (!d) return;
+    const lang = HariMarg.lang || 'en';
+    const name = lang === 'mr' ? d.name_mr : d.name;
+    const status = lang === 'mr' ? d.status_label_mr : d.status_label;
+    const halt = lang === 'mr' ? d.current_halt_mr : d.current_halt;
+    HariMarg.speak(`${name}. ${status}. ${lang === 'mr' ? 'सध्याचे ठिकाण' : 'Current location'}: ${halt}.`, lang);
+  }
+
+  // ---- FILTER ----
+  function setDindiFilter(filter, chipEl) {
+    currentFilter = filter;
+    document.querySelectorAll('#dindi-filters .chip').forEach(c => c.classList.remove('active'));
+    chipEl.classList.add('active');
+    renderDindiList();
+  }
+
+  // ---- NEARBY PALKHIS ----
+  async function loadNearbyPalkhis() {
+    const container = document.getElementById('nearby-palkhis-list');
+    const radius = document.getElementById('radius-select').value;
+
+    if (!userLat || !userLng) {
+      container.innerHTML = `
+        <div class="empty-state" style="padding:20px;">
+          <div class="es-icon">📍</div>
+          <div class="es-text">Enable location to discover nearby palkhis</div>
+          <button class="btn btn-sm btn-primary" onclick="requestLocationAndLoad()" style="margin-top:8px;">
+            📍 Share Location
+          </button>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = '<div class="loading-spinner">Scanning nearby area...</div>';
+
+    try {
+      const res = await fetch(`/api/dindis/nearby?lat=${userLat}&lng=${userLng}&radius=${radius}`);
+      const data = await res.json();
+
+      if (!data.nearby || data.nearby.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state" style="padding:20px;">
+            <div class="es-icon">🔍</div>
+            <div class="es-text">No palkhis found within ${radius} km. Try increasing the radius.</div>
+          </div>`;
+        return;
+      }
+
+      const lang = HariMarg.lang || 'en';
+      container.innerHTML = data.nearby.map(d => {
+        const cfg = statusConfig[d.status] || statusConfig.halt;
+        const name = lang === 'mr' ? d.name_mr : d.name;
+        const halt = lang === 'mr' ? d.current_halt_mr : d.current_halt;
+
+        return `
+          <div class="nearby-palkhi-card" onclick="selectDindi('${d.id}')">
+            <div class="nearby-palkhi-icon" style="border-color:${d.color || cfg.color};">
+              🚩
+            </div>
+            <div class="nearby-palkhi-info">
+              <div class="nearby-palkhi-name">${name}</div>
+              <div class="nearby-palkhi-loc">📍 ${halt}</div>
+            </div>
+            <div class="nearby-palkhi-meta">
+              <div class="nearby-palkhi-dist">📏 ${d.distance_text}</div>
+              <div class="nearby-palkhi-status" style="color:${cfg.color}; background:${cfg.bg};">
+                ${cfg.emoji} ${cfg.label}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+    } catch (err) {
+      console.error('Error loading nearby palkhis:', err);
+      container.innerHTML = '<div class="empty-state"><div class="es-icon">😔</div><div class="es-text">Could not load nearby palkhis.</div></div>';
+    }
+  }
+
+  function requestLocationAndLoad() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
+        loadNearbyPalkhis();
+        loadDindis(); // Reload with distance
+      }, () => {
+        // Fallback to Pune
+        userLat = 18.5204;
+        userLng = 73.8567;
+        loadNearbyPalkhis();
+        loadDindis();
+      });
+    } else {
+      userLat = 18.5204;
+      userLng = 73.8567;
+      loadNearbyPalkhis();
+      loadDindis();
+    }
+  }
+
+  // ---- SHOW USER LOCATION ON MAP ----
+  async function showUserOnPalkhiMap() {
+    try {
+      const loc = await HariMarg.getLocation();
+      if (loc && palkhiMap) {
+        userLat = loc.lat;
+        userLng = loc.lng;
+
+        L.marker([loc.lat, loc.lng], {
+          icon: L.divIcon({
+            html: `<div style="
+              width: 18px; height: 18px;
+              background: #2980B9;
+              border: 3px solid white;
+              border-radius: 50%;
+              box-shadow: 0 0 12px rgba(41,128,185,0.5);
+            "></div>`,
+            className: '',
+            iconSize: [18, 18],
+            iconAnchor: [9, 9],
+          }),
+        }).addTo(palkhiMap).bindPopup('<strong>📍 You are here</strong>');
+      }
+    } catch (err) {
+      // Fallback
+      userLat = 18.5204;
+      userLng = 73.8567;
+    }
+  }
+
+  // ---- INIT ----
+  document.addEventListener('DOMContentLoaded', async () => {
+    initPalkhiMap();
+    await showUserOnPalkhiMap();
+    await loadDindis();
+    await loadNearbyPalkhis();
+  });
+</script>
+{% endblock %}

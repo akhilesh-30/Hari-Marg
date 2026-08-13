@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}Profile & Certificate — Hari Marg{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl px-4 sm:px-8 py-6">
+
+  <!-- PAGE HEADER STRIP -->
+  <div class="page-header-strip">
+    <h1 class="page-title" data-i18n="profile">👤 Warkari Profile</h1>
+    <p class="page-subtitle">Manage tracking info, dindi registration, check-ins, and certificate</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- LEFT COLUMN: USER INFO & CHECK-IN -->
+    <div class="flex flex-col gap-6">
+      
+      <!-- PROFILE INFO CARD -->
+      <div class="card p-6 sm:p-8">
+        <div class="mb-6 flex items-center gap-4">
+          <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-accent font-serif text-2xl font-bold text-accent-foreground shadow-md" id="profile-avatar">व</div>
+          <div>
+            <h2 class="font-serif text-xl font-bold text-accent">Personal Tracking Profile</h2>
+            <p class="font-sans text-xs text-muted-foreground">Keep your profile updated for family & dindi</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col gap-4">
+          <div>
+            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Your Name / तुमचे नाव</label>
+            <input type="text" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" id="profile-name" placeholder="Enter your name" oninput="saveProfile()">
+          </div>
+          <div>
+            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Family Tracking Code / कुटुंब कोड</label>
+            <input type="text" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" id="family-code" placeholder="e.g. WARI-2026-FAMILY" oninput="saveProfile()">
+            <p class="mt-1 font-sans text-xs text-muted-foreground">Share code with family members to track each other's location.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOCATION CHECK-IN CARD -->
+      <div class="card p-6 sm:p-8 border-l-4 border-accent">
+        <h3 class="mb-2 font-serif text-lg font-bold text-accent">📍 Location Check-in</h3>
+        <p class="mb-4 font-sans text-sm text-muted-foreground leading-relaxed">
+          Share your current coordinates so family and dindi leaders can track your walking progress.
+        </p>
+        <button class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-6 py-3.5 font-sans font-semibold text-accent-foreground shadow-md transition-all hover:brightness-110 active:scale-95" id="checkin-btn" onclick="checkIn()">
+          📍 Check In Now / चेक-इन करा
+        </button>
+        <div id="checkin-status" class="mt-3 text-center font-sans text-xs font-medium text-muted-foreground"></div>
+      </div>
+
+      <!-- SEVA OFFERING FORM -->
+      <div class="card p-6 sm:p-8">
+        <h3 class="mb-4 font-serif text-lg font-bold text-accent">🙏 Offer Seva / सेवा नोंदणी</h3>
+        <div class="flex flex-col gap-4">
+          <div>
+            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Seva Type / सेवा प्रकार</label>
+            <select class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" id="seva-type">
+              <option value="food">🍛 Food / अन्नदान</option>
+              <option value="water">💧 Water / पाणी</option>
+              <option value="medical">🏥 Medical Aid / वैद्यकीय</option>
+              <option value="rest">🛏️ Rest / विश्रांती</option>
+              <option value="sanitation">🚻 Sanitation / स्वच्छता</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Provider Name / सेवादार नाव</label>
+            <input type="text" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" id="seva-provider" placeholder="Your name or organization">
+          </div>
+          <div>
+            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Contact / संपर्क</label>
+            <input type="tel" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" id="seva-contact" placeholder="Mobile number">
+          </div>
+          <div>
+            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Location Name / ठिकाण</label>
+            <input type="text" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" id="seva-location" placeholder="e.g. Near Saswad bus stand">
+          </div>
+          <button class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 font-sans font-semibold text-primary-foreground shadow-md transition-all hover:brightness-105" onclick="submitSeva()">
+            Submit Seva / सेवा नोंदवा
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT COLUMN: DINDI REGISTRATION & CERTIFICATE -->
+    <div class="flex flex-col gap-6">
+
+      <!-- DINDI REGISTRATION CARD -->
+      <div class="card p-6 sm:p-8">
+        <h3 class="mb-4 font-serif text-lg font-bold text-accent">🚩 Dindi Registration</h3>
+        <div class="flex flex-col gap-4">
+          <div>
+            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Dindi Name / दिंडी नाव</label>
+            <input type="text" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" id="dindi-name" placeholder="e.g. Shri Vitthal Dindi">
+          </div>
+          <div>
+            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Admin Contact / संपर्क</label>
+            <input type="tel" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" id="dindi-contact" placeholder="Mobile number">
+          </div>
+          <div>
+            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Route / मार्ग</label>
+            <select class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" id="dindi-route">
+              <option value="alandi">Alandi (Sant Dnyaneshwar)</option>
+              <option value="dehu">Dehu (Sant Tukaram)</option>
+            </select>
+          </div>
+          <button class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 font-sans font-semibold text-primary-foreground shadow-md transition-all hover:brightness-105" onclick="registerDindi()">
+            Register Dindi → दिंडी नोंदणी
+          </button>
+          <a href="/admin" class="inline-flex w-full items-center justify-center gap-2 rounded-full border border-accent/30 bg-secondary px-6 py-3 font-sans font-semibold text-accent transition-colors hover:bg-primary hover:text-white">
+            🔑 Go to Dindi Admin Dashboard
+          </a>
+        </div>
+      </div>
+
+      <!-- WARI CERTIFICATE PREVIEW -->
+      <div class="card p-6 sm:p-8">
+        <h3 class="mb-4 font-serif text-lg font-bold text-accent">📜 Wari Participation Certificate</h3>
+        
+        <div class="relative overflow-hidden rounded-2xl border-2 border-primary bg-gradient-to-br from-card to-secondary/40 p-8 text-center shadow-md" id="certificate">
+          <div class="text-4xl mb-2">🛕</div>
+          <h4 class="font-serif text-2xl font-bold text-accent">वारी प्रमाणपत्र</h4>
+          <p class="mt-2 font-sans text-xs text-muted-foreground">This certifies that</p>
+          <div class="my-4 font-serif text-3xl font-bold text-primary" id="cert-name">Warkari</div>
+          <p class="font-sans text-xs sm:text-sm text-muted-foreground leading-relaxed">
+            has successfully participated in the sacred<br>
+            <strong class="text-foreground">Ashadi Wari Pilgrimage 2026</strong><br>
+            from Alandi/Dehu to Pandharpur
+          </p>
+          <p class="mt-4 font-sans text-xs font-semibold text-accent">
+            जय हरी विठ्ठल! 🙏 पुण्यस्मरण!
+          </p>
+        </div>
+
+        <button class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-primary/30 bg-secondary px-6 py-3.5 font-sans font-semibold text-accent transition-colors hover:bg-primary hover:text-white" onclick="downloadCertificate()">
+          📥 Download Certificate
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function loadProfile() {
+    const name = localStorage.getItem('hm_name') || '';
+    const code = localStorage.getItem('hm_family_code') || '';
+    document.getElementById('profile-name').value = name;
+    document.getElementById('family-code').value = code;
+    if (name) {
+      document.getElementById('profile-avatar').textContent = name.charAt(0).toUpperCase();
+      document.getElementById('cert-name').textContent = name;
+    }
+  }
+
+  function saveProfile() {
+    const name = document.getElementById('profile-name').value;
+    const code = document.getElementById('family-code').value;
+    localStorage.setItem('hm_name', name);
+    localStorage.setItem('hm_family_code', code);
+    if (name) {
+      document.getElementById('profile-avatar').textContent = name.charAt(0).toUpperCase();
+      document.getElementById('cert-name').textContent = name;
+    }
+  }
+
+  async function registerDindi() {
+    const name = document.getElementById('dindi-name').value;
+    const contact = document.getElementById('dindi-contact').value;
+    const route = document.getElementById('dindi-route').value;
+
+    if (!name || !contact) {
+      HariMarg.showToast('Please fill in all fields / सर्व फील्ड भरा');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/register_dindi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, contact, route_type: route, admin_name: localStorage.getItem('hm_name') || 'Admin' }),
+      });
+      const data = await res.json();
+      HariMarg.showToast(data.message || 'Dindi registered! / दिंडी नोंदणी झाली!');
+    } catch (err) {
+      HariMarg.showToast('Registration saved locally');
+    }
+  }
+
+  async function checkIn() {
+    const btn = document.getElementById('checkin-btn');
+    const status = document.getElementById('checkin-status');
+    btn.disabled = true;
+    btn.textContent = '📍 Getting location...';
+
+    try {
+      const loc = await HariMarg.getLocation();
+      const res = await fetch('/api/sync_location', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          latitude: loc.lat,
+          longitude: loc.lng,
+          family_code: localStorage.getItem('hm_family_code') || '',
+        }),
+      });
+      const data = await res.json();
+      status.innerHTML = `✅ Checked in at ${new Date().toLocaleTimeString()}`;
+      HariMarg.showToast('Location shared! / ठिकाण शेअर केले!');
+    } catch (err) {
+      status.innerHTML = `✅ Location saved (offline mode)`;
+    }
+
+    btn.disabled = false;
+    btn.textContent = '📍 Check In Now / चेक-इन करा';
+  }
+
+  async function submitSeva() {
+    const sevaData = {
+      type: document.getElementById('seva-type').value,
+      provider_name: document.getElementById('seva-provider').value,
+      contact: document.getElementById('seva-contact').value,
+      location_name: document.getElementById('seva-location').value,
+    };
+
+    if (!sevaData.provider_name || !sevaData.contact) {
+      HariMarg.showToast('Please fill in required fields');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/submit_seva', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sevaData),
+      });
+      const data = await res.json();
+      HariMarg.showToast(data.message || 'Seva registered! Thank you! 🙏');
+    } catch (err) {
+      HariMarg.showToast('Seva saved locally. Thank you! 🙏');
+    }
+  }
+
+  function downloadCertificate() {
+    const cert = document.getElementById('certificate');
+    const printWin = window.open('', '_blank');
+    printWin.document.write(`
+      <html>
+      <head>
+        <title>Wari Certificate</title>
+        <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;700&display=swap" rel="stylesheet">
+        <style>
+          body { font-family: 'Mukta', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #FDF6EC; }
+          .cert { background: linear-gradient(135deg, #FFF8F0, #FDF6EC); border: 3px solid #E8703A; border-radius: 16px; padding: 48px; text-align: center; max-width: 500px; position: relative; }
+          .cert::before { content:''; position:absolute; inset:8px; border:1.5px solid #8B2E1F; border-radius:12px; pointer-events:none; }
+          .cert-title { font-size: 1.8rem; color: #8B2E1F; font-weight:700; }
+          .cert-name { font-size: 2.2rem; color: #E8703A; margin: 16px 0; font-weight:700; }
+          .cert-body { color: #7A5C46; line-height: 1.8; }
+        </style>
+      </head>
+      <body>
+        <div class="cert">
+          <div style="font-size:2.5rem;">🛕</div>
+          <div class="cert-title">वारी प्रमाणपत्र</div>
+          <div class="cert-body">This certifies that</div>
+          <div class="cert-name">${document.getElementById('cert-name').textContent}</div>
+          <div class="cert-body">has successfully participated in the sacred<br><strong>Ashadi Wari Pilgrimage 2026</strong><br>from Alandi/Dehu to Pandharpur</div>
+          <div style="margin-top:16px; font-size:0.9rem; color:#B89A80;">जय हरी विठ्ठल! 🙏 पुण्यस्मरण!</div>
+        </div>
+        <script>setTimeout(() => window.print(), 500);<\/script>
+      </body>
+      </html>
+    `);
+  }
+
+  document.addEventListener('DOMContentLoaded', loadProfile);
+</script>
+{% endblock %}

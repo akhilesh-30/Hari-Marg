@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Near Me — Hari Marg{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl px-4 sm:px-8 py-6">
+
+  <!-- PAGE HEADER STRIP -->
+  <div class="page-header-strip">
+    <h1 class="page-title" data-i18n="near_me">📍 Near Me</h1>
+    <p class="page-subtitle">Nearest hospitals, water points, food &amp; rest stops along the path</p>
+  </div>
+
+  <div class="flex flex-col gap-6">
+
+    <!-- LOCATION BANNER CARD -->
+    <div class="card flex flex-row items-center justify-between gap-4 p-4 sm:p-5">
+      <div class="flex items-center gap-3 min-w-0">
+        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-secondary text-accent text-xl">📍</span>
+        <div class="min-w-0">
+          <span class="font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Your Location</span>
+          <div id="nearme-coords-text" class="truncate font-sans text-base font-semibold text-foreground">
+            Locating…
+          </div>
+        </div>
+      </div>
+      <button class="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-secondary px-4 py-2 font-sans text-xs font-semibold text-accent transition-colors hover:bg-primary hover:text-primary-foreground" onclick="reloadFacilitiesWithLocation()">
+        🔄 Refresh
+      </button>
+    </div>
+
+    <!-- CATEGORY FILTER CHIPS -->
+    <div class="filter-row flex items-center gap-2 overflow-x-auto pb-2" id="category-filters">
+      <button class="chip active rounded-full px-5 py-2.5 font-sans text-sm font-semibold transition-all" data-category="all" onclick="setCategory('all', this)">🔍 All</button>
+      <button class="chip rounded-full px-5 py-2.5 font-sans text-sm font-semibold transition-all" data-category="medical" onclick="setCategory('medical', this)">🏥 Medical</button>
+      <button class="chip rounded-full px-5 py-2.5 font-sans text-sm font-semibold transition-all" data-category="food" onclick="setCategory('food', this)">🍛 Food</button>
+      <button class="chip rounded-full px-5 py-2.5 font-sans text-sm font-semibold transition-all" data-category="water" onclick="setCategory('water', this)">💧 Water</button>
+      <button class="chip rounded-full px-5 py-2.5 font-sans text-sm font-semibold transition-all" data-category="sanitation" onclick="setCategory('sanitation', this)">🚻 Washroom</button>
+    </div>
+
+    <!-- FACILITY CARD GRID -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="facility-list">
+      <div class="col-span-full py-12 text-center text-muted-foreground">
+        <span class="loading-spinner">Finding nearest places…</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentCategory = 'all';
+
+const categoryIcons = {
+  medical:   { emoji: '🏥', bg: 'bg-destructive/10 text-destructive' },
+  food:      { emoji: '🍛', bg: 'bg-primary/10 text-primary' },
+  water:     { emoji: '💧', bg: 'bg-sky-500/10 text-sky-600' },
+  rest:      { emoji: '🛏️', bg: 'bg-emerald-500/10 text-emerald-600' },
+  sanitation:{ emoji: '🚻', bg: 'bg-amber-500/10 text-amber-600' },
+  temple:    { emoji: '🛕', bg: 'bg-accent/10 text-accent' }
+};
+
+async function loadNearestFacilities() {
+  const list       = document.getElementById('facility-list');
+  const coordsText = document.getElementById('nearme-coords-text');
+
+  let lat = localStorage.getItem('hm_user_lat') || 18.3419;
+  let lng = localStorage.getItem('hm_user_lng') || 74.0198;
+
+  coordsText.textContent = `${parseFloat(lat).toFixed(4)}°, ${parseFloat(lng).toFixed(4)}°`;
+  list.innerHTML = '<div class="col-span-full py-12 text-center text-muted-foreground"><span class="loading-spinner">Finding nearest places…</span></div>';
+
+  try {
+    const res  = await fetch(`/api/nearby?lat=${lat}&lng=${lng}&category=${currentCategory}&limit=12`);
+    const data = await res.json();
+
+    if (!data.facilities || data.facilities.length === 0) {
+      list.innerHTML = `
+        <div class="col-span-full py-12 text-center">
+          <div class="text-4xl mb-2">📍</div>
+          <p class="font-sans text-muted-foreground">No facilities found nearby for this category.</p>
+        </div>`;
+      return;
+    }
+
+    const lang = HariMarg.lang || 'en';
+
+    list.innerHTML = data.facilities.map((f) => {
+      const cfg  = categoryIcons[f.category] || { emoji: '📌', bg: 'bg-primary/10 text-primary' };
+      const name = lang === 'mr' ? (f.name_mr || f.name) : f.name;
+
+      const typeBadge = f.facility_type === 'govt'
+        ? '<span class="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-bold text-emerald-600 uppercase">GOVT</span>'
+        : f.facility_type === 'private'
+        ? '<span class="rounded-full bg-sky-500/10 px-2.5 py-0.5 text-xs font-bold text-sky-600 uppercase">PRIVATE</span>'
+        : '<span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary uppercase">FREE SEVA</span>';
+
+      return `
+        <div class="card flex flex-col justify-between p-6 transition-all hover:-translate-y-1 hover:shadow-xl">
+          <div>
+            <div class="mb-4 flex items-start gap-4">
+              <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${cfg.bg} text-2xl">
+                ${cfg.emoji}
+              </span>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between gap-2 flex-wrap mb-1">
+                  <h3 class="font-serif text-lg font-bold text-accent truncate">${name}</h3>
+                  ${typeBadge}
+                </div>
+                <p class="font-sans text-xs text-muted-foreground line-clamp-2">${f.description}</p>
+              </div>
+            </div>
+
+            <div class="mb-4 flex flex-wrap gap-2">
+              <span class="rounded-full border border-border bg-secondary px-3 py-1 font-sans text-xs font-semibold text-accent">
+                📏 ${f.distance_text} away
+              </span>
+              ${f.open_hours ? `<span class="rounded-full border border-border bg-secondary px-3 py-1 font-sans text-xs font-semibold text-muted-foreground">⏰ ${f.open_hours}</span>` : ''}
+            </div>
+          </div>
+
+          <div class="flex gap-2 pt-2 border-t border-border/60">
+            ${f.phone
+              ? `<a href="tel:${f.phone}" class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-primary px-4 py-2 font-sans text-xs font-semibold text-primary-foreground shadow-sm transition-all hover:brightness-105">📞 Call ${f.phone}</a>`
+              : ''
+            }
+            <button
+              class="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full border border-accent/30 bg-secondary px-4 py-2 font-sans text-xs font-semibold text-accent transition-colors hover:bg-primary hover:text-primary-foreground"
+              onclick="HariMarg.speak('${(lang === 'mr' ? (f.name_mr || f.name) : f.name).replace(/'/g, "\\'")} अंतर ${f.distance_text}', '${lang}')"
+            >🔊 Listen</button>
+          </div>
+        </div>`;
+    }).join('');
+
+  } catch (err) {
+    list.innerHTML = `
+      <div class="col-span-full py-12 text-center">
+        <div class="text-4xl mb-2">😔</div>
+        <p class="font-sans text-muted-foreground">Could not load facilities. Please try again.</p>
+      </div>`;
+  }
+}
+
+function setCategory(cat, el) {
+  currentCategory = cat;
+  document.querySelectorAll('#category-filters .chip').forEach(c => c.classList.remove('active', 'bg-primary', 'text-primary-foreground'));
+  el.classList.add('active', 'bg-primary', 'text-primary-foreground');
+  loadNearestFacilities();
+}
+
+function reloadFacilitiesWithLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        localStorage.setItem('hm_user_lat', pos.coords.latitude);
+        localStorage.setItem('hm_user_lng', pos.coords.longitude);
+        loadNearestFacilities();
+      },
+      () => loadNearestFacilities()
+    );
+  } else {
+    loadNearestFacilities();
+  }
+}
+
+document.addEventListener('DOMContentLoaded', loadNearestFacilities);
+</script>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Sacred Gallery — Hari Marg{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl px-4 sm:px-8 py-6">
+
+  <!-- PAGE HEADER STRIP -->
+  <div class="page-header-strip">
+    <h1 class="page-title" data-i18n="f8_title">📷 Sacred Photo Gallery</h1>
+    <p class="page-subtitle">Devotional moments and dindi memories captured along the Wari journey</p>
+  </div>
+
+  <div class="card p-6 sm:p-8">
+    <div id="gallery-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div class="col-span-full py-12 text-center text-muted-foreground">
+        <span class="loading-spinner">Loading photos...</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const grid = document.getElementById('gallery-grid');
+  try {
+    const res = await fetch('/api/gallery');
+    const data = await res.json();
+    
+    if (!data.photos || data.photos.length === 0) {
+      grid.innerHTML = '<p class="col-span-full py-8 text-center text-muted-foreground">No photos uploaded yet.</p>';
+      return;
+    }
+    
+    grid.innerHTML = data.photos.map(p => `
+      <div class="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:scale-[1.03] hover:shadow-md">
+        <img src="${p.photo_url}" class="h-36 w-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1544717305-2782549b5136?w=300&q=80'">
+        <div class="p-3 text-left">
+          <span class="inline-block rounded-full bg-primary/10 px-2 py-0.5 font-sans text-[10px] font-bold text-primary">${p.palkhi_id}</span>
+          <p class="mt-1 truncate font-sans text-xs font-medium text-foreground">${p.caption || 'Wari Moment'}</p>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    grid.innerHTML = '<p class="col-span-full py-8 text-center text-destructive">Failed to load photos.</p>';
+  }
+});
+</script>
+{% endblock %}

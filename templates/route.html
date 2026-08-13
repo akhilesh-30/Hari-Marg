@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Palkhi Route — Hari Marg{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl px-4 sm:px-8 py-6">
+
+  <!-- PAGE HEADER STRIP -->
+  <div class="page-header-strip">
+    <h1 class="page-title" data-i18n="route">🚩 Palkhi Route Map</h1>
+    <p class="page-subtitle">Track the live ceremonial position of Palkhis on their way to Pandharpur</p>
+  </div>
+
+  <div class="flex flex-col gap-6">
+
+    <!-- Route Toggle -->
+    <div class="flex items-center gap-3" id="route-toggle">
+      <button class="chip active rounded-full px-6 py-3 font-sans text-sm font-semibold transition-all" id="toggle-alandi" onclick="switchRoute('alandi')" data-i18n="alandi_route">
+        🚩 Alandi Route
+      </button>
+      <button class="chip rounded-full px-6 py-3 font-sans text-sm font-semibold transition-all" id="toggle-dehu" onclick="switchRoute('dehu')" data-i18n="dehu_route">
+        🚩 Dehu Route
+      </button>
+    </div>
+
+    <!-- Map Card Container -->
+    <div class="overflow-hidden rounded-3xl border border-border bg-card shadow-lg">
+      <div class="h-[480px] w-full" id="map-wrapper">
+        <div id="route-map" class="h-full w-full"></div>
+      </div>
+    </div>
+
+    <!-- Route Stops Slider / Grid -->
+    <div>
+      <h2 class="mb-4 font-serif text-xl font-bold text-accent">Route Stops Schedule</h2>
+      <div class="stops-slider flex gap-3 overflow-x-auto pb-4" id="stops-slider">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script>
+  let currentRoute = 'alandi';
+
+  async function switchRoute(routeKey) {
+    currentRoute = routeKey;
+
+    document.getElementById('toggle-alandi').classList.toggle('active', routeKey === 'alandi');
+    document.getElementById('toggle-alandi').classList.toggle('bg-primary', routeKey === 'alandi');
+    document.getElementById('toggle-alandi').classList.toggle('text-primary-foreground', routeKey === 'alandi');
+    
+    document.getElementById('toggle-dehu').classList.toggle('active', routeKey === 'dehu');
+    document.getElementById('toggle-dehu').classList.toggle('bg-primary', routeKey === 'dehu');
+    document.getElementById('toggle-dehu').classList.toggle('text-primary-foreground', routeKey === 'dehu');
+
+    const route = await loadRoute(routeKey);
+    if (route) {
+      renderStopsSlider(route);
+    }
+    await loadFacilities();
+    await showUserLocation();
+  }
+
+  function renderStopsSlider(route) {
+    const slider = document.getElementById('stops-slider');
+    const lang = HariMarg.lang || 'en';
+    slider.innerHTML = route.stops.map((stop, idx) => `
+      <div class="stop-card shrink-0 cursor-pointer rounded-2xl border border-border bg-card p-4 transition-all hover:scale-105 ${idx === 0 ? 'border-primary shadow-md' : ''}" onclick="focusOnStop(${stop.lat}, ${stop.lng}); highlightStop(this);">
+        <div class="font-sans text-xs font-bold text-primary uppercase">Day ${stop.day}</div>
+        <div class="font-serif text-lg font-bold text-accent">${lang === 'mr' ? stop.name_mr : stop.name}</div>
+      </div>
+    `).join('');
+  }
+
+  function highlightStop(el) {
+    document.querySelectorAll('.stop-card').forEach(c => c.classList.remove('border-primary', 'shadow-md'));
+    el.classList.add('border-primary', 'shadow-md');
+  }
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    initRouteMap('route-map');
+    await switchRoute('alandi');
+  });
+</script>
+{% endblock %}

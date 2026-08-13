@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}Hari Marg — AI Assistant{% endblock %}
+
+{% block content %}
+<div class="chat-container" id="chat-container">
+
+  <!-- Chat Messages -->
+  <div class="chat-messages" id="chat-messages">
+    <div class="chat-bubble bot">
+      <div>🙏 <strong>Hari Marg Assistant</strong></div>
+      <div style="margin-top:6px;">
+        Namaste! I'm your Wari companion. Ask me about route information, nearby facilities, weather, health tips, or anything about the pilgrimage.<br><br>
+        नमस्कार! मी तुमचा वारी सोबती आहे. मार्ग, सुविधा, हवामान, आरोग्य सल्ला — काहीही विचारा!
+      </div>
+      <button class="speak-btn" onclick="HariMarg.speak('नमस्कार! मी तुमचा वारी सोबती आहे. मार्ग, सुविधा, हवामान, आरोग्य सल्ला, काहीही विचारा!', 'mr')">
+        🔊 Listen in Marathi
+      </button>
+    </div>
+  </div>
+
+  <!-- Quick Prompts -->
+  <div class="quick-prompts" id="quick-prompts">
+    <button class="quick-prompt-btn" onclick="sendQuickPrompt('Where is the nearest water point?')">💧 Nearest water</button>
+    <button class="quick-prompt-btn" onclick="sendQuickPrompt('Palkhi status update')">🚩 Palkhi status</button>
+    <button class="quick-prompt-btn" onclick="sendQuickPrompt('Health tips for walking in rain')">🏥 Health tips</button>
+    <button class="quick-prompt-btn" onclick="sendQuickPrompt('जवळचे वैद्यकीय शिबीर कुठे आहे?')">🏥 Medical (मराठी)</button>
+    <button class="quick-prompt-btn" onclick="sendQuickPrompt('Route to Pandharpur from current location')">🗺️ Route guide</button>
+    <button class="quick-prompt-btn" onclick="sendQuickPrompt('Emergency contacts for Wari route')">🚨 Emergency</button>
+  </div>
+
+  <!-- Input Row -->
+  <div class="chat-input-row">
+    <input type="text" class="chat-input" id="chat-input"
+      data-i18n-placeholder="type_message" placeholder="Type your message..."
+      onkeypress="if(event.key==='Enter')sendMessage()">
+    <button class="chat-send-btn" id="chat-send" onclick="sendMessage()" title="Send">
+      ➤
+    </button>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const messagesDiv = document.getElementById('chat-messages');
+  const chatInput = document.getElementById('chat-input');
+
+  function addMessage(content, type) {
+    const bubble = document.createElement('div');
+    bubble.className = `chat-bubble ${type}`;
+
+    if (type === 'bot') {
+      bubble.innerHTML = `
+        <div>${content}</div>
+        <button class="speak-btn" onclick="HariMarg.speak(this.parentElement.querySelector('div').textContent, '${HariMarg.lang}')">
+          🔊 Listen
+        </button>
+      `;
+    } else {
+      bubble.textContent = content;
+    }
+
+    messagesDiv.appendChild(bubble);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  function addTypingIndicator() {
+    const indicator = document.createElement('div');
+    indicator.className = 'chat-bubble bot';
+    indicator.id = 'typing-indicator';
+    indicator.innerHTML = '<div class="loading-spinner" style="padding:4px;">Thinking...</div>';
+    messagesDiv.appendChild(indicator);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  function removeTypingIndicator() {
+    const el = document.getElementById('typing-indicator');
+    if (el) el.remove();
+  }
+
+  async function sendMessage() {
+    const message = chatInput.value.trim();
+    if (!message) return;
+
+    addMessage(message, 'user');
+    chatInput.value = '';
+    addTypingIndicator();
+
+    const reply = await HariMarg.sendChat(message);
+    removeTypingIndicator();
+    addMessage(reply, 'bot');
+  }
+
+  function sendQuickPrompt(prompt) {
+    chatInput.value = prompt;
+    sendMessage();
+  }
+</script>
+{% endblock %}

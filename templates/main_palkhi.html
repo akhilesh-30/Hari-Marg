@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}Main Ceremonial Palkhi Live Tracking — Hari Marg{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-6xl px-4 sm:px-8 py-6">
+
+  <!-- PAGE HEADER STRIP -->
+  <div class="page-header-strip">
+    <h1 class="page-title">🚩 Main Ceremonial Palkhi Live Tracking</h1>
+    <p class="page-subtitle">Track the primary Palkhi of Sant Dnyaneshwar &amp; Sant Tukaram Maharaj on their sacred journey</p>
+  </div>
+
+  <div class="flex flex-col gap-6">
+
+    <!-- HERO STATUS CARD -->
+    <div class="card p-6 sm:p-8 bg-gradient-to-br from-primary via-primary-dark to-accent text-white shadow-xl">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <span class="inline-block rounded-full bg-white/20 px-3.5 py-1 font-sans text-xs font-bold uppercase tracking-wider text-white">LIVE CEREMONIAL TRACKER</span>
+          <h2 id="main-palkhi-title" class="mt-2 font-serif text-2xl sm:text-3xl font-bold text-white">Shri Sant Dnyaneshwar Maharaj Palkhi</h2>
+          <div id="main-palkhi-status" class="mt-2 font-sans text-base font-medium text-white/90">
+            📍 Current Location: <strong>Saswad</strong> (Day 4) — ⏸️ Halted for Prasad &amp; Rest
+          </div>
+        </div>
+        <button class="inline-flex items-center gap-2 rounded-full bg-white/20 px-5 py-2.5 font-sans font-semibold text-white transition-colors hover:bg-white/30" id="main-palkhi-audio-btn" onclick="speakMainPalkhiStatus()">
+          🔊 Listen
+        </button>
+      </div>
+    </div>
+
+    <!-- MAP CONTAINER -->
+    <div class="card p-4 sm:p-6">
+      <div class="mb-4 flex items-center justify-between">
+        <h3 class="font-serif text-lg font-bold text-accent flex items-center gap-2">
+          <span>🗺️</span> Main Route Map (Alandi to Pandharpur)
+        </h3>
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive uppercase tracking-wider">
+          <span class="h-2 w-2 rounded-full bg-destructive animate-pulse"></span> LIVE GPS
+        </span>
+      </div>
+
+      <div class="h-[400px] w-full overflow-hidden rounded-2xl border border-border">
+        <div id="main-palkhi-map" class="h-full w-full"></div>
+      </div>
+    </div>
+
+    <!-- ROUTE SCHEDULE STOPS -->
+    <div>
+      <h3 class="mb-4 font-serif text-xl font-bold text-accent">📅 Main Palkhi Schedule &amp; Key Stops</h3>
+
+      <div class="stops-slider flex gap-3 overflow-x-auto pb-4 mb-6">
+        <div class="stop-card shrink-0 cursor-pointer rounded-2xl border border-border bg-card p-4 transition-all hover:scale-105" onclick="highlightStop(0)">
+          <div class="font-sans text-xs font-bold text-primary uppercase">Day 1 - 2</div>
+          <div class="font-serif text-base font-bold text-accent">Alandi → Pune</div>
+        </div>
+        <div class="stop-card shrink-0 cursor-pointer rounded-2xl border border-border bg-card p-4 transition-all hover:scale-105" onclick="highlightStop(2)">
+          <div class="font-sans text-xs font-bold text-primary uppercase">Day 3 - 4</div>
+          <div class="font-serif text-base font-bold text-accent">Pune → Saswad</div>
+        </div>
+        <div class="stop-card shrink-0 cursor-pointer rounded-2xl border border-border bg-card p-4 transition-all hover:scale-105" onclick="highlightStop(3)">
+          <div class="font-sans text-xs font-bold text-primary uppercase">Day 5</div>
+          <div class="font-serif text-base font-bold text-accent">Saswad → Jejuri</div>
+        </div>
+        <div class="stop-card shrink-0 cursor-pointer rounded-2xl border border-border bg-card p-4 transition-all hover:scale-105" onclick="highlightStop(4)">
+          <div class="font-sans text-xs font-bold text-primary uppercase">Day 6 - 7</div>
+          <div class="font-serif text-base font-bold text-accent">Jejuri → Walhe</div>
+        </div>
+        <div class="stop-card shrink-0 cursor-pointer rounded-2xl border border-border bg-card p-4 transition-all hover:scale-105" onclick="highlightStop(5)">
+          <div class="font-sans text-xs font-bold text-primary uppercase">Day 8 - 9</div>
+          <div class="font-serif text-base font-bold text-accent">Lonand → Phaltan</div>
+        </div>
+        <div class="stop-card shrink-0 cursor-pointer rounded-2xl border border-border bg-card p-4 transition-all hover:scale-105" onclick="highlightStop(7)">
+          <div class="font-sans text-xs font-bold text-primary uppercase">Day 18</div>
+          <div class="font-serif text-base font-bold text-accent">Pandharpur</div>
+        </div>
+      </div>
+
+      <!-- SCHEDULE CARDS GRID (3 cols on desktop) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="schedule-cards-container">
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-2">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-secondary text-xl">🚩</span>
+            <span class="rounded-full bg-secondary px-3 py-1 font-sans text-xs font-semibold text-accent">Day 1-2</span>
+          </div>
+          <h4 class="font-serif text-base font-bold text-accent">Alandi Departure &amp; Pune Halt</h4>
+          <p class="mt-1 font-sans text-xs text-muted-foreground">Start of sacred journey from Sant Dnyaneshwar Temple</p>
+        </div>
+
+        <div class="card p-5 border-l-4 border-primary">
+          <div class="flex items-center justify-between mb-2">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-secondary text-xl">🛕</span>
+            <span class="rounded-full bg-primary px-3 py-1 font-sans text-xs font-semibold text-white">Current Stop</span>
+          </div>
+          <h4 class="font-serif text-base font-bold text-accent">Dive Ghat Crossing to Saswad</h4>
+          <p class="mt-1 font-sans text-xs text-muted-foreground">Iconic uphill walk through Dive Ghat with 300+ Dindis</p>
+        </div>
+
+        <div class="card p-5">
+          <div class="flex items-center justify-between mb-2">
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-secondary text-xl">🟡</span>
+            <span class="rounded-full bg-secondary px-3 py-1 font-sans text-xs font-semibold text-accent">Upcoming</span>
+          </div>
+          <h4 class="font-serif text-base font-bold text-accent">Jejuri Bhandara &amp; Walhe Night Halt</h4>
+          <p class="mt-1 font-sans text-xs text-muted-foreground">Golden turmeric celebrations at Lord Khandoba Temple</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script>
+  let mainMap = null;
+  let mainPalkhiMarker = null;
+  let currentPalkhiData = null;
+
+  const mainRouteStops = [
+    { name: "Alandi", lat: 18.6786, lng: 73.8998, day: "Day 1" },
+    { name: "Pune", lat: 18.5204, lng: 73.8567, day: "Day 2" },
+    { name: "Saswad", lat: 18.3419, lng: 74.0198, day: "Day 3-4" },
+    { name: "Jejuri", lat: 18.2764, lng: 74.1614, day: "Day 5" },
+    { name: "Walhe", lat: 18.1234, lng: 74.0567, day: "Day 6" },
+    { name: "Lonand", lat: 17.9333, lng: 74.1500, day: "Day 7-8" },
+    { name: "Phaltan", lat: 17.9922, lng: 74.4306, day: "Day 9-10" },
+    { name: "Pandharpur", lat: 17.6792, lng: 75.3317, day: "Day 18 Arrival" }
+  ];
+
+  async function initMainPalkhiMap() {
+    mainMap = L.map('main-palkhi-map', {
+      center: [18.2, 74.3],
+      zoom: 8,
+      zoomControl: false
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(mainMap);
+
+    L.control.zoom({ position: 'topright' }).addTo(mainMap);
+
+    const lineCoords = mainRouteStops.map(s => [s.lat, s.lng]);
+    const polyline = L.polyline(lineCoords, {
+      color: '#e8703a',
+      weight: 5,
+      opacity: 0.85,
+      dashArray: '8, 6'
+    }).addTo(mainMap);
+
+    mainRouteStops.forEach((stop, i) => {
+      const isEndpoint = i === 0 || i === mainRouteStops.length - 1;
+      L.marker([stop.lat, stop.lng], {
+        icon: L.divIcon({
+          html: `<div style="
+            background: white;
+            border: 2.5px solid ${isEndpoint ? '#8b2e1f' : '#e8703a'};
+            border-radius: 50%;
+            width: ${isEndpoint ? '30px' : '22px'};
+            height: ${isEndpoint ? '30px' : '22px'};
+            display:flex; align-items:center; justify-content:center;
+            font-size: ${isEndpoint ? '1rem' : '0.75rem'};
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+          ">${isEndpoint ? (i === 0 ? '🚩' : '🛕') : '📍'}</div>`,
+          className: '',
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        })
+      }).addTo(mainMap).bindPopup(`<strong>${stop.name}</strong><br><small>${stop.day}</small>`);
+    });
+
+    mainMap.fitBounds(polyline.getBounds(), { padding: [30, 30] });
+
+    try {
+      const res = await fetch('/api/main_palkhi');
+      const data = await res.json();
+      currentPalkhiData = data;
+
+      document.getElementById('main-palkhi-title').textContent = data.palkhi_name || 'Shri Sant Dnyaneshwar Maharaj Palkhi';
+      document.getElementById('main-palkhi-status').innerHTML = `📍 Current Location: <strong>${data.current_location_name}</strong> (Day ${data.day || 4}) — ${data.status || 'Halted'}`;
+
+      const orangePalkhiIcon = L.divIcon({
+        html: `<div style="
+          width: 48px; height: 48px;
+          background: #e8703a;
+          border: 3px solid #FFFFFF;
+          border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 1.6rem;
+          box-shadow: 0 4px 16px rgba(232, 112, 58, 0.6);
+          animation: hm-glow 2s infinite;
+        ">🚩</div>`,
+        className: '',
+        iconSize: [48, 48],
+        iconAnchor: [24, 24],
+        popupAnchor: [0, -26]
+      });
+
+      mainPalkhiMarker = L.marker([data.lat, data.lng], { icon: orangePalkhiIcon }).addTo(mainMap);
+      mainPalkhiMarker.bindPopup(`
+        <div style="font-family:Inter, sans-serif; text-align:center; min-width:160px;">
+          <strong style="color:#8b2e1f; font-size:1.05rem;">${data.palkhi_name}</strong><br>
+          <span style="color:#e8703a; font-weight:700;">📍 ${data.current_location_name}</span><br>
+          <small style="color:#7A5C46;">Status: ${data.status}</small>
+        </div>
+      `).openPopup();
+    } catch (e) {
+      console.error('Error fetching main palkhi:', e);
+    }
+  }
+
+  function highlightStop(index) {
+    if (!mainMap || !mainRouteStops[index]) return;
+    const s = mainRouteStops[index];
+    mainMap.flyTo([s.lat, s.lng], 11, { duration: 0.8 });
+  }
+
+  function speakMainPalkhiStatus() {
+    if (currentPalkhiData) {
+      HariMarg.speak(`${currentPalkhiData.palkhi_name_mr || currentPalkhiData.palkhi_name} सध्या ${currentPalkhiData.current_location_name_mr || currentPalkhiData.current_location_name} येथे आहे.`, 'mr');
+    } else {
+      HariMarg.speak('श्री संत ज्ञानेश्वर महाराज पालखी सध्या सासवड येथे आहे.', 'mr');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', initMainPalkhiMap);
+</script>
+{% endblock %}

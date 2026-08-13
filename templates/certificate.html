@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Hari Marg — Official Certificate of Completion{% endblock %}
+
+{% block content %}
+<div class="content-header" style="margin-bottom: 16px;">
+  <h2 class="page-title" style="margin-bottom: 4px;">📜 Official Wari Certificate</h2>
+  <p class="page-subtitle">Generate your personalized Wari pilgrimage certificate of completion and download it as an official PDF</p>
+</div>
+
+<!-- Certificate Generator Form Card -->
+<div class="card" style="padding: 20px; margin-bottom: 20px; border: 1.5px solid var(--primary-light);">
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+    <span class="card-icon saffron" style="width:36px; height:36px; font-size:1.2rem;">✍️</span>
+    <h3 style="font-family: var(--font-display); color: var(--accent); margin: 0; font-size: 1.25rem;">
+      Enter Pilgrim Details
+    </h3>
+  </div>
+
+  <form id="cert-form" onsubmit="generateCert(event)">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+      <div class="form-group" style="margin-bottom:0; text-align:left;">
+        <label class="form-label">Pilgrim Full Name / वारकऱ्याचे पूर्ण नाव *</label>
+        <input type="text" id="cert-name" class="form-input" placeholder="e.g. Ramesh Pandurang Patil" required style="font-size: 1.05rem;">
+      </div>
+
+      <div class="form-group" style="margin-bottom:0; text-align:left;">
+        <label class="form-label">Starting Location / प्रस्थान ठिकाण *</label>
+        <input type="text" id="cert-start-loc" class="form-input" placeholder="e.g. Alandi" required value="Alandi" list="start-loc-list" style="font-size: 1.05rem;">
+        <datalist id="start-loc-list">
+          <option value="Alandi"></option>
+          <option value="Dehu"></option>
+          <option value="Pune"></option>
+          <option value="Saswad"></option>
+          <option value="Jejuri"></option>
+          <option value="Lonand"></option>
+          <option value="Phaltan"></option>
+        </datalist>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      <button type="submit" class="btn btn-primary" style="flex:1;">
+        ✨ Generate Preview
+      </button>
+      <button type="button" class="btn btn-accent" onclick="downloadPdfDirect()" style="flex:1;">
+        📥 Download Official PDF
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Visual Certificate Preview Card -->
+<div id="certificate-preview-container" style="display: none;">
+  <div class="cert-preview-card">
+    <div class="cert-inner-border">
+      <div style="font-size: 2rem; margin-bottom: 4px;">🚩</div>
+      <div class="cert-title">Certificate of Completion</div>
+      <div class="cert-subtitle">Hari Marg — Wari Pilgrimage Journey</div>
+
+      <div class="cert-body-text">This is to certify that</div>
+
+      <div class="cert-recipient" id="cert-display-name">
+        Ramesh Pandurang Patil
+      </div>
+
+      <div class="cert-body-text">
+        has successfully completed the sacred Wari walking pilgrimage covering the route from <strong id="cert-display-loc" style="color:var(--accent);">Alandi</strong> to <strong>Pandharpur</strong> (~240 km).
+      </div>
+
+      <div style="font-family: var(--font-display); font-size: 1.3rem; color: var(--accent); margin-top: 16px;">
+        Jai Hari Vitthal!
+      </div>
+
+      <div class="cert-seal">🛕</div>
+      <div style="font-size: 0.78rem; color: var(--text-light); margin-top: 8px;" id="cert-display-date">
+        Issued on 13 August 2026
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-bottom: 24px;">
+    <button class="btn btn-lg btn-accent" onclick="downloadPdfDirect()">
+      📥 Download PDF Certificate (ReportLab)
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function generateCert(e) {
+    if (e) e.preventDefault();
+    const name = document.getElementById('cert-name').value.trim();
+    const loc = document.getElementById('cert-start-loc').value.trim() || 'Alandi';
+
+    if (!name) {
+      HariMarg.showToast('Please enter pilgrim name');
+      return;
+    }
+
+    document.getElementById('cert-display-name').textContent = name;
+    document.getElementById('cert-display-loc').textContent = loc;
+    document.getElementById('cert-display-date').textContent = `Issued on ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    document.getElementById('certificate-preview-container').style.display = 'block';
+
+    HariMarg.showToast('Certificate generated!');
+  }
+
+  function downloadPdfDirect() {
+    const name = document.getElementById('cert-name').value.trim();
+    const loc = document.getElementById('cert-start-loc').value.trim() || 'Alandi';
+
+    if (!name) {
+      HariMarg.showToast('Please enter pilgrim name first');
+      return;
+    }
+
+    HariMarg.showToast('Preparing PDF download...');
+    // Direct browser file download from reportlab endpoint
+    const url = `/api/certificate/pdf?name=${encodeURIComponent(name)}&starting_location=${encodeURIComponent(loc)}`;
+    window.location.href = url;
+  }
+</script>
+{% endblock %}

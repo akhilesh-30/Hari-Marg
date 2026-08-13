@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Hari Marg — Your Digital Companion for the Wari Pilgrimage. Live Palkhi tracking, nearby facilities, weather alerts, and AI guidance.">
+  <meta name="theme-color" content="#8B2E1F">
+  <title>{% block title %}Hari Marg — Digital Wari Companion{% endblock %}</title>
+
+  <!-- Google Fonts: Fraunces (display/serif) + Inter (sans) + Mukta (Marathi) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..900&family=Inter:wght@300;400;500;600;700;800&family=Mukta:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN with reference design token config -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            saffron: '#e8703a',
+            maroon: '#8b2e1f',
+            gold: '#d9a441',
+            background: '#fdf6ec',
+            foreground: '#4a1c14',
+            card: '#fffaf3',
+            'card-foreground': '#4a1c14',
+            primary: '#e8703a',
+            'primary-foreground': '#fdf6ec',
+            secondary: '#f6e7d5',
+            'secondary-foreground': '#8b2e1f',
+            muted: '#f2e6d6',
+            'muted-foreground': '#9a6a52',
+            accent: '#8b2e1f',
+            'accent-foreground': '#fdf6ec',
+            border: '#ecd9c3',
+            input: '#ecd9c3',
+            ring: '#e8703a',
+          },
+          fontFamily: {
+            serif: ['Fraunces', 'Georgia', 'serif'],
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            marathi: ['Mukta', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- App Custom Animations CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+  {% block head_extra %}{% endblock %}
+</head>
+<body class="min-h-screen bg-background text-foreground font-sans antialiased selection:bg-secondary selection:text-accent">
+
+  <!-- ========== TOP NAVIGATION HEADER (Matching Reference UI) ========== -->
+  <header class="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-md">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-8 py-3.5 sm:py-4">
+      
+      <!-- Brand Logo & Title -->
+      <a href="/" class="flex items-center gap-3 group">
+        <span aria-hidden="true" class="flex h-10 w-10 items-center justify-center rounded-full bg-accent font-serif text-lg font-bold text-accent-foreground shadow-md transition-transform group-hover:scale-105">
+          ॐ
+        </span>
+        <span class="font-serif text-2xl font-bold tracking-tight text-accent">Hari Marg</span>
+      </a>
+
+      <!-- Desktop Nav Pills -->
+      <nav aria-label="Primary" class="hidden items-center gap-1.5 md:flex">
+        <a href="/" class="nav-link-item rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors text-muted-foreground hover:text-accent hover:bg-secondary/60" id="nav-home">Home</a>
+        <a href="/route" class="nav-link-item rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors text-muted-foreground hover:text-accent hover:bg-secondary/60" id="nav-route">Route</a>
+        <a href="/near_me" class="nav-link-item rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors text-muted-foreground hover:text-accent hover:bg-secondary/60" id="nav-nearme">Near Me</a>
+        <a href="/weather" class="nav-link-item rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors text-muted-foreground hover:text-accent hover:bg-secondary/60" id="nav-weather">Weather</a>
+        <a href="/track" class="nav-link-item rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors text-muted-foreground hover:text-accent hover:bg-secondary/60" id="nav-track">Track Dindi</a>
+        <a href="/seva" class="nav-link-item rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors text-muted-foreground hover:text-accent hover:bg-secondary/60" id="nav-seva">Seva</a>
+        <a href="/emergency" class="nav-link-item rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors text-muted-foreground hover:text-accent hover:bg-secondary/60" id="nav-emergency">Emergency</a>
+        <a href="/profile" class="nav-link-item rounded-full px-4 py-2 font-sans text-sm font-medium transition-colors text-muted-foreground hover:text-accent hover:bg-secondary/60" id="nav-profile">Profile</a>
+      </nav>
+
+      <!-- Actions & Wari Badge -->
+      <div class="flex items-center gap-3">
+        <span class="hidden sm:inline-block rounded-full border border-primary/30 bg-secondary px-3.5 py-1.5 font-sans text-xs font-semibold tracking-wide text-secondary-foreground">
+          Wari 2026
+        </span>
+        <button class="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-accent hover:bg-primary hover:text-primary-foreground transition-all" id="lang-toggle" title="Toggle Language" onclick="HariMarg && HariMarg.toggleLang && HariMarg.toggleLang()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </button>
+        <button class="flex h-9 w-9 items-center justify-center rounded-full bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-all" onclick="window.location.href='/emergency'" title="Emergency Guidance">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========== MAIN CONTENT AREA ========== -->
+  <main class="w-full" id="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ========== BOTTOM NAVIGATION (Mobile Viewport) ========== -->
+  <nav aria-label="Primary Mobile" class="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/95 backdrop-blur-md md:hidden">
+    <ul class="flex items-stretch justify-between px-2 py-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+      <li class="flex-1">
+        <a href="/" class="mobile-nav-item flex flex-col items-center gap-1 py-1 text-muted-foreground transition-colors" id="mob-home">
+          <span class="mob-icon-box flex h-8 w-8 items-center justify-center rounded-full transition-all">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </span>
+          <span class="font-sans text-[11px] font-medium leading-none">Home</span>
+        </a>
+      </li>
+      <li class="flex-1">
+        <a href="/route" class="mobile-nav-item flex flex-col items-center gap-1 py-1 text-muted-foreground transition-colors" id="mob-route">
+          <span class="mob-icon-box flex h-8 w-8 items-center justify-center rounded-full transition-all">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>
+          </span>
+          <span class="font-sans text-[11px] font-medium leading-none">Route</span>
+        </a>
+      </li>
+      <li class="flex-1">
+        <a href="/near_me" class="mobile-nav-item flex flex-col items-center gap-1 py-1 text-muted-foreground transition-colors" id="mob-nearme">
+          <span class="mob-icon-box flex h-8 w-8 items-center justify-center rounded-full transition-all">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          </span>
+          <span class="font-sans text-[11px] font-medium leading-none">Near Me</span>
+        </a>
+      </li>
+      <li class="flex-1">
+        <a href="/weather" class="mobile-nav-item flex flex-col items-center gap-1 py-1 text-muted-foreground transition-colors" id="mob-weather">
+          <span class="mob-icon-box flex h-8 w-8 items-center justify-center rounded-full transition-all">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.94 11.23a5 5 0 1 0-7.88 5.77"/><path d="M17.5 21a4.5 4.5 0 1 0 0-9 4.3 4.3 0 0 0-1.56.28 4.5 4.5 0 1 0-8.62 1.72"/></svg>
+          </span>
+          <span class="font-sans text-[11px] font-medium leading-none">Weather</span>
+        </a>
+      </li>
+      <li class="flex-1">
+        <a href="/profile" class="mobile-nav-item flex flex-col items-center gap-1 py-1 text-muted-foreground transition-colors" id="mob-profile">
+          <span class="mob-icon-box flex h-8 w-8 items-center justify-center rounded-full transition-all">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+          <span class="font-sans text-[11px] font-medium leading-none">Profile</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- ========== TOAST CONTAINER ========== -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Hidden audio element for TTS -->
+  <audio id="tts-player" style="display:none;"></audio>
+
+  <!-- ========== SCRIPTS ========== -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script>
+    // Active navigation highlight logic
+    (function() {
+      const path = window.location.pathname;
+      const map = {
+        '/': { desktop: 'nav-home', mobile: 'mob-home' },
+        '/route': { desktop: 'nav-route', mobile: 'mob-route' },
+        '/near_me': { desktop: 'nav-nearme', mobile: 'mob-nearme' },
+        '/weather': { desktop: 'nav-weather', mobile: 'mob-weather' },
+        '/profile': { desktop: 'nav-profile', mobile: 'mob-profile' },
+        '/track': { desktop: 'nav-track', mobile: 'mob-home' },
+        '/seva': { desktop: 'nav-seva', mobile: 'mob-home' },
+        '/emergency': { desktop: 'nav-emergency', mobile: 'mob-home' },
+      };
+      const activeObj = map[path] || map['/'];
+      if (activeObj.desktop) {
+        const del = document.getElementById(activeObj.desktop);
+        if (del) {
+          del.classList.add('bg-secondary', 'text-accent', 'font-semibold');
+          del.classList.remove('text-muted-foreground');
+        }
+      }
+      if (activeObj.mobile) {
+        const mel = document.getElementById(activeObj.mobile);
+        if (mel) {
+          mel.classList.add('text-accent', 'font-semibold');
+          mel.classList.remove('text-muted-foreground');
+          const box = mel.querySelector('.mob-icon-box');
+          if (box) box.classList.add('bg-primary', 'text-primary-foreground', 'shadow-md');
+        }
+      }
+    })();
+  </script>
+  {% block scripts %}{% endblock %}
+
+</body>
+</html>

@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+{% block title %}Hari Marg — Digital Wari Companion{% endblock %}
+
+{% block content %}
+
+<!-- ============ HERO SECTION ============ -->
+<section class="relative overflow-hidden bg-background py-12 lg:py-20">
+  
+  <!-- Rotating rays background -->
+  <div aria-hidden="true" class="pointer-events-none absolute right-[-8rem] top-[-6rem] h-[36rem] w-[36rem] opacity-[0.07] [mask-image:radial-gradient(circle,black_30%,transparent_68%)]">
+    <div class="hm-spin-slow h-full w-full" style="background: repeating-conic-gradient(from 0deg, var(--maroon) 0deg 6deg, transparent 6deg 12deg);"></div>
+  </div>
+
+  <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-8 lg:grid-cols-2">
+    
+    <!-- Left: Copy & Actions -->
+    <div class="text-center lg:text-left">
+      <p class="hm-fade-up mb-4 font-sans text-sm font-semibold uppercase tracking-[0.3em] text-accent" style="animation-delay: 0.05s;">
+        ॥ विठ्ठल विठ्ठल ॥
+      </p>
+      <h1 class="hm-fade-up text-balance font-serif text-5xl sm:text-6xl font-bold leading-[1.05] text-accent" style="animation-delay: 0.15s;">
+        <span data-i18n="hero_title_main">Hari Marg</span>
+        <span class="mt-2 block text-3xl sm:text-4xl text-primary" data-i18n="hero_title_sub">Your Digital Wari Companion</span>
+      </h1>
+      <p class="hm-fade-up mx-auto mt-6 max-w-xl text-pretty text-base sm:text-lg leading-relaxed text-muted-foreground lg:mx-0" style="animation-delay: 0.25s;" data-i18n="hero_desc">
+        Walk the sacred road to Pandharpur with confidence — live palkhi routes, nearby seva stops, and weather along the way, all in one devoted companion.
+      </p>
+
+      <!-- Action Buttons -->
+      <div class="hm-fade-up mt-9 flex flex-col items-center gap-4 sm:flex-row lg:items-start lg:justify-start" style="animation-delay: 0.35s;">
+        <div>
+          <button type="button" onclick="fetchUserLocation()" id="fetch-location-btn" class="group relative inline-flex items-center gap-3 rounded-full bg-primary px-8 py-4 font-sans text-base sm:text-lg font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition-all duration-200 hover:brightness-105 active:scale-95">
+            <span aria-hidden="true" class="hm-ping-slow absolute inset-0 rounded-full bg-primary/40"></span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span id="fetch-btn-label" data-i18n="fetch_location">Fetch My Location</span>
+          </button>
+          <div id="location-status" class="mt-2 min-h-[20px] font-sans text-sm text-secondary-foreground"></div>
+        </div>
+
+        <a href="/route" class="inline-flex items-center gap-2 rounded-full border border-accent/30 px-7 py-4 font-sans text-base sm:text-lg font-semibold text-accent transition-colors hover:bg-secondary">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>
+          <span data-i18n="explore_route">Explore Route</span>
+        </a>
+      </div>
+
+      <!-- Stats -->
+      <dl class="hm-fade-up mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-border pt-8" style="animation-delay: 0.45s;">
+        <div class="text-center lg:text-left">
+          <dt class="font-serif text-3xl font-bold text-primary" data-i18n="stat_1_val">250 km</dt>
+          <dd class="mt-1 font-sans text-xs sm:text-sm text-muted-foreground" data-i18n="stat_1_lbl">Sacred route</dd>
+        </div>
+        <div class="text-center lg:text-left">
+          <dt class="font-serif text-3xl font-bold text-primary" data-i18n="stat_2_val">21 days</dt>
+          <dd class="mt-1 font-sans text-xs sm:text-sm text-muted-foreground" data-i18n="stat_2_lbl">Traditional Wari</dd>
+        </div>
+        <div class="text-center lg:text-left">
+          <dt class="font-serif text-3xl font-bold text-primary" data-i18n="stat_3_val">9 lakh+</dt>
+          <dd class="mt-1 font-sans text-xs sm:text-sm text-muted-foreground" data-i18n="stat_3_lbl">Warkaris walking</dd>
+        </div>
+      </dl>
+    </div>
+
+    <!-- Right: Deity Image Circle with Floating Info Chips -->
+    <div class="relative mx-auto flex h-[26rem] w-[26rem] max-w-full items-center justify-center">
+      <div aria-hidden="true" class="hm-glow absolute inset-6 rounded-full bg-primary/25 blur-3xl"></div>
+      <div class="hm-float relative h-[22rem] w-[22rem] overflow-hidden rounded-full border-[6px] border-accent/70 shadow-2xl shadow-accent/25">
+        <img src="/static/images/vitthal.png" alt="Illustration of Lord Vitthal" class="h-full w-full object-cover">
+      </div>
+
+      <!-- Floating Chips (Removed Dindi chip as requested) -->
+      <div class="hm-fade-in absolute left-0 top-10 flex items-center gap-3 rounded-2xl border border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur-sm">
+        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-accent">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        </span>
+        <div class="text-left">
+          <p class="font-sans text-xs text-muted-foreground" data-i18n="chip_next_stop_lbl">Next stop</p>
+          <p class="font-sans text-sm font-semibold text-foreground" data-i18n="chip_next_stop_val">Wakhari · 4 km</p>
+        </div>
+      </div>
+
+      <div class="hm-fade-in absolute bottom-12 right-0 flex items-center gap-3 rounded-2xl border border-border bg-card/95 px-4 py-3 shadow-lg backdrop-blur-sm">
+        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary text-accent">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.94 11.23a5 5 0 1 0-7.88 5.77"/><path d="M17.5 21a4.5 4.5 0 1 0 0-9 4.3 4.3 0 0 0-1.56.28 4.5 4.5 0 1 0-8.62 1.72"/></svg>
+        </span>
+        <div class="text-left">
+          <p class="font-sans text-xs text-muted-foreground" data-i18n="chip_today_lbl">Today</p>
+          <p class="font-sans text-sm font-semibold text-foreground" data-i18n="chip_today_val">28° · Light rain</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ PALKHI MAP CARD SECTION ============ -->
+<section class="mx-auto max-w-6xl px-4 sm:px-8 mb-16">
+  <div class="overflow-hidden rounded-3xl border border-border bg-card shadow-lg">
+    
+    <!-- Card Header -->
+    <div class="flex items-center justify-between border-b border-border/70 px-6 py-5">
+      <div class="flex items-center gap-3">
+        <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary text-accent text-xl">
+          🗺️
+        </span>
+        <div>
+          <h2 class="font-serif text-xl font-bold text-accent" data-i18n="map_card_title">Pandharpur Wari Live Map</h2>
+          <p class="font-sans text-xs text-muted-foreground" data-i18n="map_card_subtitle">Track real-time Palkhi positions & route stops</p>
+        </div>
+      </div>
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive uppercase tracking-wider">
+        <span class="h-2 w-2 rounded-full bg-destructive animate-pulse"></span> LIVE
+      </span>
+    </div>
+
+    <!-- Palkhi Live Banner -->
+    <div class="palkhi-status mx-6 my-4 rounded-2xl" id="palkhi-live-banner">
+      <div class="palkhi-dot"></div>
+      <div class="palkhi-info">
+        <div class="palkhi-route font-sans font-semibold text-foreground" id="palkhi-banner-title">Shri Sant Dnyaneshwar Maharaj Palkhi</div>
+        <div class="palkhi-location font-sans text-xs text-muted-foreground" id="palkhi-banner-status">Loading Palkhi location...</div>
+      </div>
+      <button class="audio-mini-player inline-flex items-center gap-1.5 rounded-full bg-secondary px-3.5 py-1.5 font-sans text-xs font-medium text-accent hover:bg-primary hover:text-primary-foreground transition-colors" id="palkhi-banner-audio" data-i18n="listen">
+        📢 Listen
+      </button>
+    </div>
+
+    <!-- Map Container -->
+    <div class="h-[320px] w-full">
+      <div id="landing-map" class="h-full w-full"></div>
+    </div>
+
+    <p id="map-instructions" class="py-3 text-center font-sans text-xs italic text-muted-foreground" data-i18n="map_tap_instruction">
+      📍 Tap anywhere on the map to set your location manually
+    </p>
+  </div>
+</section>
+
+<!-- ============ FEATURES SECTION ("Everything for your Wari") ============ -->
+<section class="mx-auto max-w-6xl px-4 sm:px-8 pb-24" aria-labelledby="features-heading">
+  <div class="mb-10 text-center">
+    <h2 id="features-heading" class="font-serif text-4xl font-bold text-accent" data-i18n="features_heading">
+      Everything for your Wari
+    </h2>
+    <p class="mx-auto mt-3 max-w-2xl text-pretty font-sans text-muted-foreground" data-i18n="features_subheading">
+      From the first step in Alandi to darshan at Pandharpur, Hari Marg walks with you.
+    </p>
+  </div>
+
+  <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    
+    <!-- Feature 1: Wari Route -->
+    <a href="/route" class="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-card p-7 text-left transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-accent/10">
+      <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-accent transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>
+      </span>
+      <span class="font-serif text-xl font-bold text-accent" data-i18n="f1_title">Wari Route</span>
+      <span class="font-sans text-sm leading-relaxed text-muted-foreground" data-i18n="f1_desc">Follow the live palkhi path from Alandi & Dehu to Pandharpur.</span>
+    </a>
+
+    <!-- Feature 2: Near Me -->
+    <a href="/near_me" class="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-card p-7 text-left transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-accent/10">
+      <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-accent transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+      </span>
+      <span class="font-serif text-xl font-bold text-accent" data-i18n="f2_title">Near Me</span>
+      <span class="font-sans text-sm leading-relaxed text-muted-foreground" data-i18n="f2_desc">Find seva camps, water points, and rest stops around you.</span>
+    </a>
+
+    <!-- Feature 3: Weather -->
+    <a href="/weather" class="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-card p-7 text-left transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-accent/10">
+      <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-accent transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.94 11.23a5 5 0 1 0-7.88 5.77"/><path d="M17.5 21a4.5 4.5 0 1 0 0-9 4.3 4.3 0 0 0-1.56.28 4.5 4.5 0 1 0-8.62 1.72"/></svg>
+      </span>
+      <span class="font-serif text-xl font-bold text-accent" data-i18n="f3_title">Weather</span>
+      <span class="font-sans text-sm leading-relaxed text-muted-foreground" data-i18n="f3_desc">Monsoon forecasts and heat alerts along the day's march.</span>
+    </a>
+
+    <!-- Feature 4: My Journey -->
+    <a href="/profile" class="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-card p-7 text-left transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-accent/10">
+      <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-accent transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </span>
+      <span class="font-serif text-xl font-bold text-accent" data-i18n="f4_title">My Journey</span>
+      <span class="font-sans text-sm leading-relaxed text-muted-foreground" data-i18n="f4_desc">Track distance walked, dindi group, and darshan slots.</span>
+    </a>
+
+    <!-- Feature 5: Track Dindi -->
+    <a href="/track" class="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-card p-7 text-left transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-accent/10">
+      <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-accent transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+      </span>
+      <span class="font-serif text-xl font-bold text-accent" data-i18n="f5_title">Track Dindi</span>
+      <span class="font-sans text-sm leading-relaxed text-muted-foreground" data-i18n="f5_desc">Lookup your dindi ID, see leader info and member status.</span>
+    </a>
+
+    <!-- Feature 6: Seva & Daan -->
+    <a href="/seva" class="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-card p-7 text-left transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-accent/10">
+      <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-accent transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v6"/><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/><path d="M18 8a2 2 0 0 1 2 2v4a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+      </span>
+      <span class="font-serif text-xl font-bold text-accent" data-i18n="f6_title">Seva & Daan</span>
+      <span class="font-sans text-sm leading-relaxed text-muted-foreground" data-i18n="f6_desc">Find free food, medical centers & offer seva to Warkaris.</span>
+    </a>
+
+    <!-- Feature 7: AI Emergency -->
+    <a href="/emergency" class="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-card p-7 text-left transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-accent/10">
+      <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-accent transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </span>
+      <span class="font-serif text-xl font-bold text-accent" data-i18n="f7_title">AI Emergency</span>
+      <span class="font-sans text-sm leading-relaxed text-muted-foreground" data-i18n="f7_desc">Fast 1-tap protocols for heatstroke, dehydration & heavy rain.</span>
+    </a>
+
+    <!-- Feature 8: Sacred Gallery -->
+    <a href="/gallery" class="group flex flex-col items-start gap-4 rounded-3xl border border-border bg-card p-7 text-left transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-accent/10">
+      <span class="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-accent transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+      </span>
+      <span class="font-serif text-xl font-bold text-accent" data-i18n="f8_title">Sacred Gallery</span>
+      <span class="font-sans text-sm leading-relaxed text-muted-foreground" data-i18n="f8_desc">Devotional moments, dindi photos and certificate of completion.</span>
+    </a>
+
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="border-t border-border bg-secondary/40">
+  <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-8 py-8 sm:flex-row">
+    <div class="flex items-center gap-2.5">
+      <span aria-hidden="true" class="flex h-8 w-8 items-center justify-center rounded-full bg-accent font-serif text-sm font-bold text-accent-foreground">
+        ॐ
+      </span>
+      <span class="font-serif text-lg font-bold text-accent" data-i18n="hero_title_main">Hari Marg</span>
+    </div>
+    <p class="font-sans text-sm text-muted-foreground" data-i18n="footer_text">
+      Made with devotion for the Warkari sangha · Pandharpur Wari
+    </p>
+  </div>
+</footer>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script>
+  let landingMap = null;
+  let userLocationMarker = null;
+
+  const wariRouteCoords = [
+    {"name": "Alandi",     "lat": 18.6786, "lng": 73.8998},
+    {"name": "Pune",       "lat": 18.5204, "lng": 73.8567},
+    {"name": "Saswad",     "lat": 18.3419, "lng": 74.0198},
+    {"name": "Jejuri",     "lat": 18.2764, "lng": 74.1614},
+    {"name": "Walhe",      "lat": 18.1234, "lng": 74.0567},
+    {"name": "Lonand",     "lat": 17.9333, "lng": 74.1500},
+    {"name": "Phaltan",    "lat": 17.9922, "lng": 74.4306},
+    {"name": "Pandharpur", "lat": 17.6792, "lng": 75.3317}
+  ];
+
+  function fetchUserLocation() {
+    const btnLabel = document.getElementById('fetch-btn-label');
+    const statusDiv = document.getElementById('location-status');
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = '<span class="text-primary font-medium">Finding location...</span>';
+    btnLabel.textContent = HariMarg.t('loading');
+
+    if (!navigator.geolocation) {
+      showLocationError('Geolocation not supported by browser.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        localStorage.setItem('hm_user_lat', lat);
+        localStorage.setItem('hm_user_lng', lng);
+        if (window.HariMarg) HariMarg.currentLocation = { lat, lng };
+
+        btnLabel.textContent = HariMarg.lang === 'mr' ? 'स्थान मिळाले' : 'Location Found';
+        statusDiv.innerHTML = `<span class="text-accent font-semibold">${HariMarg.lang === 'mr' ? 'स्थानावर' : 'On path at'} ${lat.toFixed(3)}°, ${lng.toFixed(3)}°</span>`;
+        setUserMarker(lat, lng, '📍 Your Location');
+        if (window.HariMarg) HariMarg.showToast(HariMarg.lang === 'mr' ? 'स्थान मिळाले!' : 'Location Found!');
+      },
+      () => showLocationError('Location access denied. Tap map to select.'),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  function showLocationError(msg) {
+    const btnLabel = document.getElementById('fetch-btn-label');
+    const statusDiv = document.getElementById('location-status');
+    btnLabel.textContent = HariMarg.t('fetch_location');
+    statusDiv.style.display = 'block';
+    statusDiv.innerHTML = `<span class="text-destructive font-medium">⚠️ ${msg}</span>`;
+  }
+
+  function setUserMarker(lat, lng, popupText = '📍 Your Location') {
+    if (!landingMap) return;
+    if (userLocationMarker) landingMap.removeLayer(userLocationMarker);
+    userLocationMarker = L.marker([lat, lng], {
+      icon: L.divIcon({
+        html: `<div style="width:22px;height:22px;background:#e8703a;border:3px solid white;border-radius:50%;box-shadow:0 0 15px rgba(232,112,58,0.8);"></div>`,
+        className: '',
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+      })
+    }).addTo(landingMap);
+    userLocationMarker.bindPopup(`<strong>${popupText}</strong><br><small>${lat.toFixed(4)}, ${lng.toFixed(4)}</small>`).openPopup();
+    landingMap.flyTo([lat, lng], 10);
+  }
+
+  async function initLandingMap() {
+    landingMap = L.map('landing-map', { center: [18.2, 74.5], zoom: 8, zoomControl: false });
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(landingMap);
+    L.control.zoom({ position: 'topright' }).addTo(landingMap);
+
+    const lineCoords = wariRouteCoords.map(c => [c.lat, c.lng]);
+    const polyline = L.polyline(lineCoords, { color: '#e8703a', weight: 5, opacity: 0.85, dashArray: '8, 6' }).addTo(landingMap);
+
+    wariRouteCoords.forEach((stop, i) => {
+      const isEndpoint = i === 0 || i === wariRouteCoords.length - 1;
+      L.marker([stop.lat, stop.lng], {
+        icon: L.divIcon({
+          html: `<div style="background:white;border:2.5px solid ${isEndpoint ? '#8b2e1f' : '#e8703a'};border-radius:50%;width:${isEndpoint ? '30px' : '22px'};height:${isEndpoint ? '30px' : '22px'};display:flex;align-items:center;justify-content:center;font-size:${isEndpoint ? '1rem' : '0.75rem'};box-shadow:0 2px 8px rgba(0,0,0,0.15);">${isEndpoint ? (i===0?'🚩':'🛕') : '📍'}</div>`,
+          className: '',
+          iconSize: [30, 30],
+          iconAnchor: [15, 15]
+        })
+      }).addTo(landingMap).bindPopup(`<strong>${stop.name}</strong>`);
+    });
+
+    landingMap.fitBounds(polyline.getBounds(), { padding: [20, 20] });
+
+    try {
+      const res = await fetch('/static/data/palkhi.json');
+      const palkhi = await res.json();
+      document.getElementById('palkhi-banner-title').textContent = palkhi.palkhi_name;
+      document.getElementById('palkhi-banner-status').textContent = `Currently at ${palkhi.current_location_name} (Day ${palkhi.day}) — ${palkhi.status}`;
+      document.getElementById('palkhi-banner-audio').onclick = () => {
+        if (window.HariMarg) HariMarg.speak(`${palkhi.palkhi_name_mr} सध्या ${palkhi.current_location_name_mr} येथे आहे.`, 'mr');
+      };
+      const icon = L.divIcon({
+        html: `<div style="width:44px;height:44px;background:#e8703a;border:3px solid #fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;box-shadow:0 4px 16px rgba(232,112,58,0.60);animation:hm-glow 2s infinite;">🚩</div>`,
+        className: '', iconSize: [44, 44], iconAnchor: [22, 22], popupAnchor: [0, -24]
+      });
+      const marker = L.marker([palkhi.lat, palkhi.lng], { icon }).addTo(landingMap);
+      marker.bindPopup(`<div style="font-family:Inter,sans-serif;text-align:center;min-width:150px;"><strong style="color:#8b2e1f">${palkhi.palkhi_name}</strong><br><span style="color:#e8703a;font-weight:700">📍 ${palkhi.current_location_name}</span></div>`);
+    } catch(e) { console.warn('palkhi.json unavailable'); }
+
+    landingMap.on('click', (e) => {
+      const lat = e.latlng.lat, lng = e.latlng.lng;
+      localStorage.setItem('hm_user_lat', lat);
+      localStorage.setItem('hm_user_lng', lng);
+      if (window.HariMarg) HariMarg.currentLocation = { lat, lng };
+      const statusDiv = document.getElementById('location-status');
+      statusDiv.style.display = 'block';
+      statusDiv.innerHTML = `<span class="text-accent font-medium">📍 Location set: ${lat.toFixed(3)}°, ${lng.toFixed(3)}°</span>`;
+      setUserMarker(lat, lng, '📍 Selected Location');
+      if (window.HariMarg) HariMarg.showToast('Location set!');
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initLandingMap();
+    const savedLat = localStorage.getItem('hm_user_lat');
+    const savedLng = localStorage.getItem('hm_user_lng');
+    if (savedLat && savedLng) {
+      const lat = parseFloat(savedLat), lng = parseFloat(savedLng);
+      const statusDiv = document.getElementById('location-status');
+      statusDiv.style.display = 'block';
+      statusDiv.innerHTML = `<span class="text-accent font-medium">📍 Location set: ${lat.toFixed(3)}°, ${lng.toFixed(3)}°</span>`;
+    }
+  });
+</script>
+{% endblock %}

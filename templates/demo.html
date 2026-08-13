@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hari Marg - Demo View</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; background: #2c3e50; display: flex; justify-content: center; align-items: center; font-family: sans-serif; }
+        .phone-mockup {
+            width: 375px; 
+            height: 812px; 
+            background: #fff;
+            border-radius: 40px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5), inset 0 0 0 10px #111;
+            position: relative;
+            overflow: hidden;
+        }
+        /* The Notch */
+        .phone-mockup::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 25px;
+            background: #111;
+            border-bottom-left-radius: 15px;
+            border-bottom-right-radius: 15px;
+            z-index: 10;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 30px;
+        }
+        .demo-info {
+            position: absolute;
+            left: 50px;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-info">
+        <h1>Hari Marg Demo</h1>
+        <p>Interactive mobile view.</p>
+        <p>Scan to view on your phone!</p>
+    </div>
+    
+    <div class="phone-mockup">
+        <iframe src="/"></iframe>
+    </div>
+</body>
+</html>

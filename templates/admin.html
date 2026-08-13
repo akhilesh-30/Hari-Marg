@@ -1,0 +1,711 @@
+{% extends "base.html" %}
+{% block title %}Hari Marg — Dindi Admin Dashboard{% endblock %}
+
+{% block head_extra %}
+<style>
+  .admin-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(232,112,58,0.15), rgba(139,46,31,0.15));
+    border: 1px solid var(--accent);
+    color: var(--accent-dark);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.5px;
+  }
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .dindi-selector-box {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+  }
+  .headcount-badge {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+  }
+  .member-health-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: rgba(232,112,58,0.1);
+    color: var(--accent-dark);
+    border: 1px solid rgba(232,112,58,0.2);
+  }
+  .member-health-tag.alert {
+    background: rgba(217,83,79,0.12);
+    color: #c9302c;
+    border-color: rgba(217,83,79,0.3);
+  }
+  .photos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .photo-thumb-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .photo-thumb-card img {
+    width: 100%;
+    height: 110px;
+    object-fit: cover;
+  }
+  .photo-thumb-caption {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .login-card {
+    max-width: 420px;
+    margin: 40px auto;
+    padding: 28px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+    text-align: center;
+  }
+  .member-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 0.88rem;
+  }
+  .member-table th, .member-table td {
+    padding: 10px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .member-table th {
+    background: rgba(232,112,58,0.06);
+    color: var(--accent-dark);
+    font-weight: 700;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if not authenticated %}
+<!-- ================= REGISTRATION & LOGIN SCREEN ================= -->
+<div class="content-header" style="margin-bottom: 16px;">
+  <h2 class="page-title" style="margin-bottom: 4px;">🔑 Admin & Dindi Registration</h2>
+  <p class="page-subtitle">Register new Dindis to generate Palkhi IDs and log in to manage members & live status</p>
+</div>
+
+<!-- Dindi Registration Card -->
+<div class="card" style="margin-bottom: 24px; border: 1.5px solid var(--primary-light);">
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+    <span class="card-icon saffron" style="width:36px; height:36px; font-size:1.2rem;">📝</span>
+    <h3 style="font-family: var(--font-display); color: var(--accent); margin: 0; font-size: 1.25rem;">
+      Register New Dindi / नवीन दिंडी नोंदणी
+    </h3>
+  </div>
+  <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: 16px;">
+    Create a new Dindi entry to get your unique <strong>Palkhi ID (e.g. HM-043)</strong> for public tracking & member management.
+  </p>
+
+  <form id="register-dindi-form" onsubmit="submitDindiRegistration(event)">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 14px;">
+      <div class="form-group" style="margin-bottom:0; text-align:left;">
+        <label class="form-label">Dindi Name / दिंडीचे नाव *</label>
+        <input type="text" id="reg-dindi-name" class="form-input" placeholder="e.g. Tukaram Maharaj Dindi No. 12" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom:0; text-align:left;">
+        <label class="form-label">Leader Name / दिंडी प्रमुख नाव *</label>
+        <input type="text" id="reg-admin-name" class="form-input" placeholder="e.g. Sopanrao Deshmukh" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom:0; text-align:left;">
+        <label class="form-label">Contact Number / संपर्क *</label>
+        <input type="tel" id="reg-contact" class="form-input" placeholder="e.g. 9876543210" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom:0; text-align:left;">
+        <label class="form-label">Route / मार्ग</label>
+        <select id="reg-route" class="form-input">
+          <option value="alandi">Alandi to Pandharpur (Sant Dnyaneshwar)</option>
+          <option value="dehu">Dehu to Pandharpur (Sant Tukaram)</option>
+        </select>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block">
+      🚩 Register Dindi & Generate Palkhi ID
+    </button>
+  </form>
+
+  <div id="reg-success-box" style="display:none; margin-top: 16px; background: rgba(46,139,87,0.12); border: 1px solid var(--success); color: var(--success); padding: 14px; border-radius: var(--radius-sm); text-align: center;">
+  </div>
+</div>
+
+<!-- Admin Login Card -->
+<div class="login-card" style="margin: 0 auto 20px;">
+  <div style="font-size: 2.4rem; margin-bottom: 6px;">🔑</div>
+  <h2 style="font-family: var(--font-display); color: var(--accent); margin-bottom: 4px;">
+    Admin Login with Palkhi ID
+  </h2>
+  <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+    Enter your Palkhi ID (e.g. <strong>HM-042</strong> or <strong>HM-001</strong>) and password to manage your Dindi
+  </p>
+
+  {% if error %}
+  <div style="background: rgba(217,83,79,0.12); color: #c9302c; border: 1px solid rgba(217,83,79,0.3); border-radius: 8px; padding: 10px; font-size: 0.85rem; margin-bottom: 16px;">
+    ⚠️ {{ error }}
+  </div>
+  {% endif %}
+
+  <form action="/admin/login" method="POST">
+    <div class="form-group" style="text-align: left;">
+      <label class="form-label">Select or Enter Palkhi ID / दिंडी आयडी</label>
+      <input type="text" name="palkhi_id" id="login-palkhi-id-input" class="form-input" placeholder="e.g. HM-042" required value="HM-042" list="dindi-id-list">
+      <datalist id="dindi-id-list">
+        {% for d in dindis %}
+        <option value="{{ d.palkhi_id }}">{{ d.palkhi_id }} — {{ d.name }}</option>
+        {% endfor %}
+      </datalist>
+    </div>
+
+    <div class="form-group" style="text-align: left;">
+      <label class="form-label">Admin Password / पासवर्ड</label>
+      <input type="password" name="password" class="form-input" placeholder="Enter admin password" required value="admin123">
+      <div style="font-size: 0.78rem; color: var(--text-light); margin-top: 4px;">
+        💡 Demo default password: <code style="background:rgba(232,112,58,0.1); padding:2px 6px; border-radius:4px; font-weight:bold;">admin123</code>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block" style="margin-top: 16px;">
+      🔓 Login to Admin Portal
+    </button>
+  </form>
+</div>
+
+{% else %}
+<!-- ================= ADMIN DASHBOARD ================= -->
+<div class="admin-header">
+  <div>
+    <h2 class="page-title" style="margin-bottom: 4px;">🚩 Dindi Admin Dashboard</h2>
+    <div style="font-size: 0.88rem; color: var(--text-secondary);">
+      Manage headcount, member health notes, live coordinates, and photos
+    </div>
+  </div>
+  <div style="display: flex; gap: 10px; align-items: center;">
+    <span class="admin-badge">
+      🆔 ID: <strong id="current-palkhi-id-badge">{{ selected_palkhi_id }}</strong>
+    </span>
+    <a href="/admin/logout" class="btn btn-sm btn-ghost" style="color:#c9302c;">
+      🚪 Logout
+    </a>
+  </div>
+</div>
+
+<!-- Dindi Switcher Selector -->
+<div class="dindi-selector-box">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+    <div>
+      <span style="font-weight: 700; color: var(--accent); font-size: 0.9rem;">📍 Switch Managed Dindi:</span>
+    </div>
+    <select id="admin-dindi-select" onchange="switchAdminDindi()" class="form-input" style="max-width: 320px; padding: 6px 12px;">
+      {% for d in dindis %}
+      <option value="{{ d.palkhi_id }}" {% if d.palkhi_id == selected_palkhi_id %}selected{% endif %}>
+        {{ d.palkhi_id }} — {{ d.name }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+</div>
+
+<!-- TOP GRID: Headcount & Status Form -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 20px;">
+
+  <!-- Headcount & Overview Card -->
+  <div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="font-family: var(--font-display); color: var(--accent); margin: 0; font-size: 1.1rem;">
+        👥 Headcount / सदस्य संख्या
+      </h3>
+      <span class="chip active" style="font-size:0.75rem;">Unique ID: {{ dindi.palkhi_id if dindi else selected_palkhi_id }}</span>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; margin: 16px 0; background: rgba(232,112,58,0.06); padding: 16px; border-radius: 12px; border: 1px dashed rgba(232,112,58,0.3);">
+      <div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">TOTAL MEMBERS</div>
+        <div class="headcount-badge" id="headcount-display">{{ dindi.members if dindi else 0 }}</div>
+        <div style="font-size: 0.78rem; color: var(--text-light);">Registered in this group</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <button class="btn btn-sm btn-outline" onclick="adjustHeadcount(1)" style="padding: 4px 14px; font-weight: bold;">+1 Add</button>
+        <button class="btn btn-sm btn-ghost" onclick="adjustHeadcount(-1)" style="padding: 4px 14px;">-1 Sub</button>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom: 0;">
+      <label class="form-label">Direct Edit Headcount</label>
+      <div style="display: flex; gap: 8px;">
+        <input type="number" id="headcount-input" class="form-input" value="{{ dindi.members if dindi else 0 }}">
+        <button class="btn btn-sm btn-primary" onclick="updateHeadcountDirect()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Location & Status Editor -->
+  <div class="card">
+    <h3 style="font-family: var(--font-display); color: var(--accent); margin-bottom: 12px; font-size: 1.1rem;">
+      📍 Update Location & Status
+    </h3>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div class="form-group">
+        <label class="form-label">Status / स्थिति</label>
+        <select id="status-input" class="form-input">
+          <option value="moving" {% if dindi and dindi.status == 'moving' %}selected{% endif %}>🚶 Moving</option>
+          <option value="halt" {% if dindi and dindi.status == 'halt' %}selected{% endif %}>⏸️ Halted</option>
+          <option value="break" {% if dindi and dindi.status == 'break' %}selected{% endif %}>☕ Break</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Current Halt</label>
+        <input type="text" id="halt-input" class="form-input" value="{{ dindi.current_halt if dindi else 'Saswad' }}">
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div class="form-group">
+        <label class="form-label">Latitude</label>
+        <input type="number" step="0.0001" id="lat-input" class="form-input" value="{{ dindi.lat if dindi else 18.3419 }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Longitude</label>
+        <input type="number" step="0.0001" id="lng-input" class="form-input" value="{{ dindi.lng if dindi else 74.0198 }}">
+      </div>
+    </div>
+
+    <button class="btn btn-sm btn-ghost" onclick="getCurrentLocationForAdmin()" style="width: 100%; margin-bottom: 12px; font-size: 0.8rem;">
+      📍 Get Current Device GPS Location
+    </button>
+
+    <div class="form-group">
+      <label class="form-label">Status Message / अपडेट</label>
+      <input type="text" id="status-label-input" class="form-input" placeholder="e.g. Moving towards Jejuri" value="{{ dindi.status_label if dindi else '' }}">
+    </div>
+
+    <button class="btn btn-primary btn-block" onclick="saveDindiStatus()">
+      💾 Save Location & Status
+    </button>
+  </div>
+
+</div>
+
+<!-- SECTION 2: Member Registration & Basic Health Note -->
+<div class="card" style="margin-bottom: 20px;">
+  <h3 style="font-family: var(--font-display); color: var(--accent); margin-bottom: 12px; font-size: 1.15rem;">
+    📝 Register Dindi Member (Name, Age, Health Note)
+  </h3>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px;">
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">Member Full Name *</label>
+      <input type="text" id="member-name-input" class="form-input" placeholder="e.g. Tukaram Gaikwad">
+    </div>
+
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">Age / वय</label>
+      <input type="number" id="member-age-input" class="form-input" placeholder="e.g. 62">
+    </div>
+
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">Basic Health Note</label>
+      <input type="text" id="member-health-input" class="form-input" placeholder="e.g. Diabetic / Foot Blisters / Healthy" list="health-presets">
+      <datalist id="health-presets">
+        <option value="Healthy — Active walker"></option>
+        <option value="Diabetic — Needs timely sugar snacks"></option>
+        <option value="Hypertension / High BP — Water breaks"></option>
+        <option value="Foot Blisters — Medical aid applied"></option>
+        <option value="Asthma — Inhaler carried"></option>
+      </datalist>
+    </div>
+  </div>
+
+  <button class="btn btn-accent btn-block" onclick="registerMember()">
+    ➕ Register Member / सदस्य नोंदवा
+  </button>
+
+  <!-- Member Table -->
+  <div style="overflow-x: auto; margin-top: 16px;">
+    <table class="member-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Age</th>
+          <th>Basic Health Note</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="members-table-body">
+        {% if members %}
+        {% for m in members %}
+        <tr id="member-row-{{ m.id }}">
+          <td><strong>{{ m.name }}</strong></td>
+          <td>{{ m.age if m.age else 'N/A' }}</td>
+          <td>
+            <span class="member-health-tag {% if 'Diabetic' in m.health_note or 'Blisters' in m.health_note or 'Hypertension' in m.health_note %}alert{% endif %}">
+              {{ m.health_note if m.health_note else 'Healthy' }}
+            </span>
+          </td>
+          <td>
+            <button class="btn btn-sm btn-ghost" onclick="deleteMember({{ m.id }})" style="color:#c9302c; padding:2px 8px; font-size:0.75rem;">
+              🗑️ Delete
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+        {% else %}
+        <tr id="empty-members-row">
+          <td colspan="4" style="text-align:center; color:var(--text-light); padding:16px;">
+            No registered members yet. Add members using the form above.
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SECTION 3: Group Photos Upload (Prototype static files) -->
+<div class="card">
+  <h3 style="font-family: var(--font-display); color: var(--accent); margin-bottom: 12px; font-size: 1.15rem;">
+    📷 Upload Dindi Group Photos
+  </h3>
+
+  <form id="photo-upload-form" onsubmit="uploadGroupPhoto(event)" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: flex-end;">
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">Choose Group Photo File</label>
+      <input type="file" id="photo-file-input" accept="image/*" class="form-input" required style="padding: 6px;">
+    </div>
+    <div class="form-group" style="margin-bottom:0;">
+      <label class="form-label">Photo Caption / वर्णन</label>
+      <input type="text" id="photo-caption-input" class="form-input" placeholder="e.g. Afternoon Prasad at Saswad">
+    </div>
+    <button type="submit" class="btn btn-primary" style="height: 42px;">
+      📤 Upload Photo
+    </button>
+  </form>
+
+  <!-- Photo Gallery -->
+  <div class="photos-grid" id="photos-grid">
+    {% if photos %}
+    {% for p in photos %}
+    <div class="photo-thumb-card">
+      <img src="{{ p.photo_url }}" alt="{{ p.caption }}" onerror="this.src='https://images.unsplash.com/photo-1544717305-2782549b5136?w=300&q=80'">
+      <div class="photo-thumb-caption" title="{{ p.caption }}">{{ p.caption }}</div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div style="grid-column: 1 / -1; font-size: 0.85rem; color: var(--text-light); padding: 12px; text-align: center;">
+      No group photos uploaded yet. Upload prototype photos above.
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+{% if authenticated %}
+<script>
+  let currentPalkhiId = "{{ selected_palkhi_id }}";
+
+  // Switch Dindi in Admin Session
+  async function switchAdminDindi() {
+    const select = document.getElementById('admin-dindi-select');
+    const palkhiId = select.value;
+    try {
+      const res = await fetch('/api/admin/select_dindi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ palkhi_id: palkhiId }),
+      });
+      if (res.ok) {
+        window.location.reload();
+      }
+    } catch (err) {
+      HariMarg.showToast('Could not switch Dindi');
+    }
+  }
+
+  // Adjust headcount (+1 or -1)
+  function adjustHeadcount(delta) {
+    const input = document.getElementById('headcount-input');
+    let val = parseInt(input.value || 0) + delta;
+    if (val < 0) val = 0;
+    input.value = val;
+    updateHeadcountDirect();
+  }
+
+  // Update Headcount Direct
+  async function updateHeadcountDirect() {
+    const membersCount = parseInt(document.getElementById('headcount-input').value || 0);
+    const status = document.getElementById('status-input').value;
+    const halt = document.getElementById('halt-input').value;
+    const lat = parseFloat(document.getElementById('lat-input').value);
+    const lng = parseFloat(document.getElementById('lng-input').value);
+    const statusLabel = document.getElementById('status-label-input').value;
+
+    try {
+      const res = await fetch('/api/admin/dindi/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          palkhi_id: currentPalkhiId,
+          members: membersCount,
+          status: status,
+          current_halt: halt,
+          lat: lat,
+          lng: lng,
+          status_label: statusLabel
+        }),
+      });
+      const data = await res.json();
+      document.getElementById('headcount-display').textContent = membersCount;
+      HariMarg.showToast(data.message || 'Headcount updated!');
+    } catch (err) {
+      HariMarg.showToast('Headcount updated locally');
+    }
+  }
+
+  // Save full status
+  async function saveDindiStatus() {
+    await updateHeadcountDirect();
+  }
+
+  // Get current device GPS location
+  async function getCurrentLocationForAdmin() {
+    try {
+      HariMarg.showToast('Getting GPS location...');
+      const loc = await HariMarg.getLocation();
+      if (loc) {
+        document.getElementById('lat-input').value = loc.lat.toFixed(4);
+        document.getElementById('lng-input').value = loc.lng.toFixed(4);
+        HariMarg.showToast('GPS coordinates loaded!');
+      }
+    } catch (err) {
+      HariMarg.showToast('Unable to fetch GPS');
+    }
+  }
+
+  // Register new member
+  async function registerMember() {
+    const name = document.getElementById('member-name-input').value.trim();
+    const age = document.getElementById('member-age-input').value.trim();
+    const healthNote = document.getElementById('member-health-input').value.trim();
+
+    if (!name) {
+      HariMarg.showToast('Please enter member name');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin/members/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          palkhi_id: currentPalkhiId,
+          name: name,
+          age: age,
+          health_note: healthNote
+        }),
+      });
+      const data = await res.json();
+      HariMarg.showToast(data.message || 'Member registered!');
+
+      // Reset form
+      document.getElementById('member-name-input').value = '';
+      document.getElementById('member-age-input').value = '';
+      document.getElementById('member-health-input').value = '';
+
+      // Update table & headcount display
+      if (data.members) renderMembersTable(data.members);
+      if (data.headcount !== undefined) {
+        document.getElementById('headcount-display').textContent = data.headcount;
+        document.getElementById('headcount-input').value = data.headcount;
+      }
+    } catch (err) {
+      HariMarg.showToast('Error registering member');
+    }
+  }
+
+  // Delete registered member
+  async function deleteMember(memberId) {
+    if (!confirm('Are you sure you want to remove this member?')) return;
+
+    try {
+      const res = await fetch('/api/admin/members/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ member_id: memberId, palkhi_id: currentPalkhiId }),
+      });
+      const data = await res.json();
+      HariMarg.showToast('Member removed');
+      if (data.members) renderMembersTable(data.members);
+      if (data.headcount !== undefined) {
+        document.getElementById('headcount-display').textContent = data.headcount;
+        document.getElementById('headcount-input').value = data.headcount;
+      }
+    } catch (err) {
+      HariMarg.showToast('Error removing member');
+    }
+  }
+
+  function renderMembersTable(members) {
+    const tbody = document.getElementById('members-table-body');
+    if (!members || members.length === 0) {
+      tbody.innerHTML = `
+        <tr id="empty-members-row">
+          <td colspan="4" style="text-align:center; color:var(--text-light); padding:16px;">
+            No registered members yet. Add members using the form above.
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = members.map(m => {
+      const isAlert = m.health_note && (m.health_note.includes('Diabetic') || m.health_note.includes('Blisters') || m.health_note.includes('Hypertension'));
+      return `
+        <tr id="member-row-${m.id}">
+          <td><strong>${m.name}</strong></td>
+          <td>${m.age || 'N/A'}</td>
+          <td>
+            <span class="member-health-tag ${isAlert ? 'alert' : ''}">
+              ${m.health_note || 'Healthy'}
+            </span>
+          </td>
+          <td>
+            <button class="btn btn-sm btn-ghost" onclick="deleteMember(${m.id})" style="color:#c9302c; padding:2px 8px; font-size:0.75rem;">
+              🗑️ Delete
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  // Upload Group Photo
+  async function uploadGroupPhoto(e) {
+    e.preventDefault();
+    const fileInput = document.getElementById('photo-file-input');
+    const captionInput = document.getElementById('photo-caption-input');
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+      HariMarg.showToast('Please select an image file');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('photo', fileInput.files[0]);
+    formData.append('palkhi_id', currentPalkhiId);
+    formData.append('caption', captionInput.value);
+
+    try {
+      HariMarg.showToast('Uploading group photo...');
+      const res = await fetch('/api/admin/upload_photo', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      HariMarg.showToast(data.message || 'Photo uploaded!');
+
+      fileInput.value = '';
+      captionInput.value = '';
+
+      if (data.photos) renderPhotoGallery(data.photos);
+    } catch (err) {
+      HariMarg.showToast('Photo upload error');
+    }
+  }
+
+  function renderPhotoGallery(photos) {
+    const grid = document.getElementById('photos-grid');
+    if (!photos || photos.length === 0) {
+      grid.innerHTML = '<div style="grid-column: 1 / -1; font-size: 0.85rem; color: var(--text-light); padding: 12px; text-align: center;">No group photos uploaded yet. Upload prototype photos above.</div>';
+      return;
+    }
+
+    grid.innerHTML = photos.map(p => `
+      <div class="photo-thumb-card">
+        <img src="${p.photo_url}" alt="${p.caption}" onerror="this.src='https://images.unsplash.com/photo-1544717305-2782549b5136?w=300&q=80'">
+        <div class="photo-thumb-caption" title="${p.caption}">${p.caption}</div>
+      </div>
+    `).join('');
+  }
+</script>
+{% endif %}
+
+<script>
+  async function submitDindiRegistration(e) {
+    e.preventDefault();
+    const name = document.getElementById('reg-dindi-name').value.trim();
+    const admin_name = document.getElementById('reg-admin-name').value.trim();
+    const contact = document.getElementById('reg-contact').value.trim();
+    const route = document.getElementById('reg-route').value;
+
+    if (!name || !contact) {
+      HariMarg.showToast('Please fill required fields');
+      return;
+    }
+
+    try {
+      HariMarg.showToast('Registering Dindi...');
+      const res = await fetch('/api/register_dindi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, admin_name, contact, route })
+      });
+      const data = await res.json();
+      if (data.palkhi_id) {
+        const box = document.getElementById('reg-success-box');
+        box.style.display = 'block';
+        box.innerHTML = `
+          <strong>🎉 ${data.message}</strong><br>
+          <span style="font-size:0.9rem;">You can now log in below using Palkhi ID: <strong>${data.palkhi_id}</strong> (Password: admin123)</span>
+        `;
+        document.getElementById('register-dindi-form').reset();
+        const loginInput = document.getElementById('login-palkhi-id-input');
+        if (loginInput) loginInput.value = data.palkhi_id;
+        HariMarg.showToast(`Registered! Palkhi ID: ${data.palkhi_id}`);
+      } else {
+        HariMarg.showToast(data.error || 'Registration failed');
+      }
+    } catch (err) {
+      HariMarg.showToast('Error registering Dindi');
+    }
+  }
+</script>
+{% endblock %}

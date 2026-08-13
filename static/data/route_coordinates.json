@@ -1,0 +1,58 @@
+{
+  "routes": {
+    "pandharpur_wari": {
+      "name": "Pandharpur Wari Route",
+      "name_mr": "पंढरपूर वारी मार्ग",
+      "origin": "Alandi",
+      "destination": "Pandharpur",
+      "total_distance_km": 235,
+      "color": "#E8703A",
+      "stops": [
+        {"name": "Alandi", "name_mr": "आळंदी", "lat": 18.6786, "lng": 73.8998, "day": 1, "type": "origin"},
+        {"name": "Pune", "name_mr": "पुणे", "lat": 18.5204, "lng": 73.8567, "day": 2, "type": "halt"},
+        {"name": "Saswad", "name_mr": "सासवड", "lat": 18.3419, "lng": 74.0198, "day": 4, "type": "halt"},
+        {"name": "Jejuri", "name_mr": "जेजुरी", "lat": 18.2764, "lng": 74.1614, "day": 5, "type": "halt"},
+        {"name": "Walhe", "name_mr": "वाल्हे", "lat": 18.1234, "lng": 74.0567, "day": 7, "type": "halt"},
+        {"name": "Lonand", "name_mr": "लोणंद", "lat": 17.9333, "lng": 74.1500, "day": 9, "type": "halt"},
+        {"name": "Phaltan", "name_mr": "फलटण", "lat": 17.9922, "lng": 74.4306, "day": 11, "type": "halt"},
+        {"name": "Pandharpur", "name_mr": "पंढरपूर", "lat": 17.6792, "lng": 75.3317, "day": 18, "type": "destination"}
+      ]
+    },
+    "alandi": {
+      "name": "Alandi — Pandharpur (Sant Dnyaneshwar Palkhi)",
+      "name_mr": "आळंदी — पंढरपूर (संत ज्ञानेश्वर पालखी)",
+      "origin": "Alandi",
+      "destination": "Pandharpur",
+      "total_distance_km": 235,
+      "color": "#E8703A",
+      "stops": [
+        {"name": "Alandi", "name_mr": "आळंदी", "lat": 18.6786, "lng": 73.8998, "day": 1, "type": "origin"},
+        {"name": "Pune", "name_mr": "पुणे", "lat": 18.5204, "lng": 73.8567, "day": 2, "type": "halt"},
+        {"name": "Saswad", "name_mr": "सासवड", "lat": 18.3419, "lng": 74.0198, "day": 4, "type": "halt"},
+        {"name": "Jejuri", "name_mr": "जेजुरी", "lat": 18.2764, "lng": 74.1614, "day": 5, "type": "halt"},
+        {"name": "Walhe", "name_mr": "वाल्हे", "lat": 18.1234, "lng": 74.0567, "day": 7, "type": "halt"},
+        {"name": "Lonand", "name_mr": "लोणंद", "lat": 17.9333, "lng": 74.1500, "day": 9, "type": "halt"},
+        {"name": "Phaltan", "name_mr": "फलटण", "lat": 17.9922, "lng": 74.4306, "day": 11, "type": "halt"},
+        {"name": "Pandharpur", "name_mr": "पंढरपूर", "lat": 17.6792, "lng": 75.3317, "day": 18, "type": "destination"}
+      ]
+    },
+    "dehu": {
+      "name": "Dehu — Pandharpur (Sant Tukaram Palkhi)",
+      "name_mr": "देहू — पंढरपूर (संत तुकाराम पालखी)",
+      "origin": "Dehu",
+      "destination": "Pandharpur",
+      "total_distance_km": 240,
+      "color": "#2E8B57",
+      "stops": [
+        {"name": "Dehu", "name_mr": "देहू", "lat": 18.7176, "lng": 73.7688, "day": 1, "type": "origin"},
+        {"name": "Pune", "name_mr": "पुणे", "lat": 18.5204, "lng": 73.8567, "day": 2, "type": "halt"},
+        {"name": "Hadapsar", "name_mr": "हडपसर", "lat": 18.5089, "lng": 73.9260, "day": 3, "type": "halt"},
+        {"name": "Saswad", "name_mr": "सासवड", "lat": 18.3419, "lng": 74.0198, "day": 5, "type": "halt"},
+        {"name": "Jejuri", "name_mr": "जेजुरी", "lat": 18.2764, "lng": 74.1614, "day": 6, "type": "halt"},
+        {"name": "Walhe", "name_mr": "वाल्हे", "lat": 18.1234, "lng": 74.0567, "day": 8, "type": "halt"},
+        {"name": "Lonand", "name_mr": "लोणंद", "lat": 17.9333, "lng": 74.1500, "day": 10, "type": "halt"},
+        {"name": "Pandharpur", "name_mr": "पंढरपूर", "lat": 17.6792, "lng": 75.3317, "day": 18, "type": "destination"}
+      ]
+    }
+  }
+}
