@@ -87,6 +87,36 @@
       </div>
     </div>
 
+    <!-- FREEFORM AI CHATBOT CARD -->
+    <div class="col-span-full card p-6 sm:p-8 mt-2">
+      <div class="mb-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-sky-500/10 text-2xl text-sky-600">🤖</span>
+          <div>
+            <h2 class="font-serif text-xl font-bold text-accent">Freeform AI Pilgrim Assistant / वारी एआय सहाय्यक</h2>
+            <p class="font-sans text-xs text-muted-foreground">Ask any question about routes, health, water, shelter, or Wari customs (bullet-point responses)</p>
+          </div>
+        </div>
+        <span class="rounded-full bg-sky-500/10 px-3.5 py-1 font-sans text-xs font-bold text-sky-700 uppercase">AI GUARDIAN</span>
+      </div>
+
+      <!-- CHAT MESSAGE LOG -->
+      <div id="ai-chat-log" class="mb-4 flex max-h-[300px] min-h-[140px] flex-col gap-3 overflow-y-auto rounded-2xl border border-border bg-secondary/30 p-4 font-sans text-sm">
+        <div class="rounded-2xl border border-border bg-card p-4 text-foreground">
+          <strong class="text-primary">Hari Marg Assistant:</strong><br>
+          Jai Hari Vitthal! 🙏 How can I assist your Wari pilgrimage today? Ask about routes, food stops, medical camps, or health guidance.
+        </div>
+      </div>
+
+      <!-- FREEFORM INPUT ROW -->
+      <div class="flex gap-3">
+        <input type="text" id="chat-input-text" class="flex-1 rounded-2xl border border-border bg-card px-5 py-3.5 font-sans text-base text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" placeholder="Type your question here (e.g. How to prevent blisters while walking?)..." onkeypress="if(event.key==='Enter')sendFreeformQuery()">
+        <button class="inline-flex items-center gap-2 rounded-2xl bg-primary px-8 py-3.5 font-sans font-semibold text-primary-foreground shadow-md transition-all hover:brightness-105" onclick="sendFreeformQuery()" type="button">
+          💬 Ask AI
+        </button>
+      </div>
+    </div>
+
   </div>
 
 </div>
@@ -137,8 +167,60 @@ function speakCurrentTips() {
   if (currentTipsText) HariMarg.speak(currentTipsText, HariMarg.lang || 'en');
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  loadEmergencyTips('heatstroke', null);
-});
+  async function sendFreeformQuery() {
+    const input = document.getElementById('chat-input-text');
+    const log = document.getElementById('ai-chat-log');
+    const msg = input.value.trim();
+    const lang = HariMarg.lang || 'en';
+
+    if (!msg) return;
+
+    log.innerHTML += `
+      <div class="rounded-2xl border border-primary/30 bg-primary/10 p-4 text-foreground text-right self-end ml-12">
+        <strong class="text-primary">You:</strong><br>${msg}
+      </div>
+    `;
+    input.value = '';
+    log.scrollTop = log.scrollHeight;
+
+    const loadingId = 'loading-' + Date.now();
+    log.innerHTML += `
+      <div id="${loadingId}" class="rounded-2xl border border-border bg-card p-4 text-foreground">
+        <strong class="text-primary">Hari Marg Assistant:</strong><br>
+        <span class="loading-spinner">Thinking...</span>
+      </div>
+    `;
+    log.scrollTop = log.scrollHeight;
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: msg, lang: lang })
+      });
+      const data = await res.json();
+      const replyEl = document.getElementById(loadingId);
+      if (replyEl) {
+        let formattedReply = (data.reply || '').replace(/\n/g, '<br>');
+        replyEl.innerHTML = `
+          <strong class="${data.blocked ? 'text-destructive' : 'text-primary'}">Hari Marg Assistant:</strong><br>
+          <div class="leading-relaxed mt-1">${formattedReply}</div>
+        `;
+      }
+    } catch (err) {
+      const replyEl = document.getElementById(loadingId);
+      if (replyEl) {
+        replyEl.innerHTML = `
+          <strong class="text-primary">Hari Marg Assistant:</strong><br>
+          Jai Hari Vitthal! 🙏 For emergency assistance, please call 108 or check the medical protocol buttons above.
+        `;
+      }
+    }
+    log.scrollTop = log.scrollHeight;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadEmergencyTips('heatstroke', null);
+  });
 </script>
 {% endblock %}

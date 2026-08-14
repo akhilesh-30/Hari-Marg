@@ -16,6 +16,8 @@ const MAP_CONFIG = {
   tileAttribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 };
 
+const FACILITY_ZOOM_THRESHOLD = 12;
+
 // Custom marker icons
 function createStopIcon(type, color) {
   const icons = {
@@ -72,6 +74,32 @@ function createFacilityIcon(category) {
   });
 }
 
+function createMinimizedFacilityIcon(category) {
+  const map = {
+    medical: { color: '#C0392B' },
+    food: { color: '#E8703A' },
+    water: { color: '#2980B9' },
+    rest: { color: '#2E8B57' },
+    sanitation: { color: '#7F8C8D' },
+    temple: { color: '#8B2E1F' },
+  };
+  const cfg = map[category] || { color: '#E8703A' };
+  return L.divIcon({
+    html: `<div style="
+      width: 14px;
+      height: 14px;
+      background: ${cfg.color};
+      border: 2px solid white;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      opacity: 0.85;"></div>`,
+    className: '',
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+    popupAnchor: [0, -10],
+  });
+}
+
 // Initialize the map
 function initRouteMap(containerId) {
   if (routeMap) return routeMap;
@@ -90,6 +118,18 @@ function initRouteMap(containerId) {
 
   // Zoom control on right side
   L.control.zoom({ position: 'topright' }).addTo(routeMap);
+
+  // Dynamic zoom listener to update facility marker icon sizes
+  routeMap.on('zoomend', () => {
+    if (!window._facilityMarkers) return;
+    const isZoomedOut = routeMap.getZoom() < FACILITY_ZOOM_THRESHOLD;
+    window._facilityMarkers.forEach(m => {
+      if (m._category) {
+        const icon = isZoomedOut ? createMinimizedFacilityIcon(m._category) : createFacilityIcon(m._category);
+        m.setIcon(icon);
+      }
+    });
+  });
 
   return routeMap;
 }
@@ -113,8 +153,8 @@ async function loadRoute(routeKey) {
     const coords = route.stops.map(s => [s.lat, s.lng]);
     const polyline = L.polyline(coords, {
       color: route.color,
-      weight: 4,
-      opacity: 0.8,
+      weight: 5,
+      opacity: 0.85,
       dashArray: '8, 6',
       lineJoin: 'round',
     }).addTo(routeMap);
@@ -125,6 +165,7 @@ async function loadRoute(routeKey) {
     route.stops.forEach((stop, idx) => {
       const marker = L.marker([stop.lat, stop.lng], {
         icon: createStopIcon(stop.type, route.color),
+        zIndexOffset: 1000,
       }).addTo(routeMap);
 
       const lang = HariMarg.lang || 'en';
@@ -165,11 +206,16 @@ async function loadFacilities(category = null) {
     }
 
     const lang = HariMarg.lang || 'en';
+    const isZoomedOut = routeMap ? routeMap.getZoom() < FACILITY_ZOOM_THRESHOLD : true;
 
     facilities.forEach(f => {
+      const icon = isZoomedOut ? createMinimizedFacilityIcon(f.category) : createFacilityIcon(f.category);
       const marker = L.marker([f.lat, f.lng], {
-        icon: createFacilityIcon(f.category),
+        icon: icon,
+        zIndexOffset: 100,
       }).addTo(routeMap);
+
+      marker._category = f.category;
 
       const name = lang === 'mr' ? f.name_mr : f.name;
       const phoneHtml = f.phone ? `<br><a href="tel:${f.phone}" style="color: #E8703A;">📞 ${f.phone}</a>` : '';
@@ -199,16 +245,17 @@ async function showUserLocation() {
       userMarker = L.marker([loc.lat, loc.lng], {
         icon: L.divIcon({
           html: `<div style="
-            width: 20px; height: 20px;
+            width: 22px; height: 22px;
             background: #2980B9;
             border: 3px solid white;
             border-radius: 50%;
-            box-shadow: 0 0 12px rgba(41,128,185,0.5);
+            box-shadow: 0 0 14px rgba(41,128,185,0.7);
           "></div>`,
           className: '',
-          iconSize: [20, 20],
-          iconAnchor: [10, 10],
+          iconSize: [22, 22],
+          iconAnchor: [11, 11],
         }),
+        zIndexOffset: 2000,
       }).addTo(routeMap);
 
       userMarker.bindPopup('<strong>📍 You are here</strong>');

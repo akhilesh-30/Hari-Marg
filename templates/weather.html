@@ -23,7 +23,7 @@
             <span class="flex items-center gap-2 font-serif text-lg font-bold text-sky-700">
               <span>🤖</span> AI Route Suggestion
             </span>
-            <span class="rounded-full bg-sky-500/10 px-3 py-1 font-sans text-xs font-bold text-sky-700 uppercase" id="ai-source-badge">GROQ AI</span>
+            <span class="rounded-full bg-sky-500/10 px-3 py-1 font-sans text-xs font-bold text-sky-700 uppercase" id="ai-source-badge">AI ASSISTANT</span>
           </div>
 
           <p id="ai-weather-recommendation" class="font-sans text-base font-medium leading-relaxed text-foreground mb-6">
@@ -122,24 +122,31 @@
 
   function getSafetyInfo(temp, rain, wind, description) {
     const desc = (description || '').toLowerCase();
+    const isMr = (HariMarg.lang === 'mr');
     if (desc.includes('thunderstorm') || rain > 20 || wind > 40) {
       return {
         class: 'danger',
-        label: '🔴 High Risk',
-        text: 'Heavy rain/thunderstorm expected. Seek immediate shelter. Avoid walking near rivers and low-lying areas. Keep emergency numbers ready.'
+        label: isMr ? '🔴 उच्च धोका' : '🔴 High Risk',
+        text: isMr
+          ? 'मुसळधार पाऊस/वादळाची शक्यता. तात्काळ सुरक्षित ठिकाणी आश्रय घ्या. नद्या आणि सखल भागाजवळ जाणे टाळा. आपत्कालीन क्रमांक तयार ठेवा.'
+          : 'Heavy rain/thunderstorm expected. Seek immediate shelter. Avoid walking near rivers and low-lying areas. Keep emergency numbers ready.'
       };
     }
     if (desc.includes('rain') || rain > 5 || temp > 38) {
       return {
         class: 'caution',
-        label: '🟡 Caution',
-        text: 'Rain expected on route. Carry rain gear and waterproof bags. Walk carefully on wet roads. Stay hydrated and take rest breaks in shade.'
+        label: isMr ? '🟡 दक्षता' : '🟡 Caution',
+        text: isMr
+          ? 'मार्गावर पाऊस अपेक्षित. रेनकोट आणि वॉटरप्रूफ पिशव्या सोबत ठेवा. ओल्या रस्त्यांवरून सावधगिरीने चाला. पाणी पित रहा आणि सावलीत विश्रांती घ्या.'
+          : 'Rain expected on route. Carry rain gear and waterproof bags. Walk carefully on wet roads. Stay hydrated and take rest breaks in shade.'
       };
     }
     return {
       class: 'safe',
-      label: '🟢 Safe',
-      text: 'Weather conditions are favorable for walking. Stay hydrated, wear comfortable footwear, and apply sunscreen. Enjoy the Wari!'
+      label: isMr ? '🟢 सुरक्षित' : '🟢 Safe',
+      text: isMr
+        ? 'चालण्यासाठी हवामान अनुकूल आहे. पाणी पित रहा, आरामदायक पादत्राणे वापरा आणि वारीचा आनंद घ्या!'
+        : 'Weather conditions are favorable for walking. Stay hydrated, wear comfortable footwear, and apply sunscreen. Enjoy the Wari!'
     };
   }
 
@@ -206,22 +213,30 @@
   }
 
   function renderMockWeather() {
+    const isMr = (HariMarg.lang === 'mr');
     document.getElementById('w-temp').textContent = '28°';
-    document.getElementById('w-desc').textContent = 'Pune Region — Partly Cloudy';
+    document.getElementById('w-desc').textContent = isMr ? 'पुणे परिसर — अंशतः ढगाळ' : 'Pune Region — Partly Cloudy';
     document.getElementById('w-icon').textContent = '⛅';
     document.getElementById('w-humidity').textContent = '78%';
     document.getElementById('w-wind').textContent = '12 km/h';
     document.getElementById('w-rain').textContent = '3 mm';
-    document.getElementById('safety-text').textContent = 'Monsoon season active. Light rain possible. Carry rain gear and avoid walking during heavy downpours. Stay hydrated.';
+    
+    const safety = getSafetyInfo(28, 3, 12, 'cloudy');
+    const advBox = document.getElementById('safety-advisory');
+    advBox.style.borderLeftColor = 'var(--success)';
+    document.getElementById('safety-text').textContent = safety.text;
   }
 
   function renderMockForecast() {
-    const stops = ['Saswad', 'Jejuri', 'Lonand', 'Phaltan', 'Natepute', 'Pandharpur'];
+    const isMr = (HariMarg.lang === 'mr');
+    const stops = isMr ? ['सासवड', 'जेजुरी', 'लोणंद', 'फलटण', 'नातेपुते', 'पंढरपूर'] : ['Saswad', 'Jejuri', 'Lonand', 'Phaltan', 'Natepute', 'Pandharpur'];
     const forecasts = stops.map((name, i) => ({
       location: name,
       temp: 26 + Math.floor(Math.random() * 6),
       main: ['Clouds', 'Rain', 'Clear', 'Drizzle', 'Clouds', 'Clear'][i],
-      description: ['Overcast', 'Light Rain', 'Sunny', 'Drizzle', 'Partly Cloudy', 'Clear Sky'][i],
+      description: isMr 
+        ? ['ढगाळ', 'हलका पाऊस', 'सूर्यप्रकाश', 'रिमझिम पाऊस', 'अंशतः ढगाळ', 'निरभ्र आकाश'][i]
+        : ['Overcast', 'Light Rain', 'Sunny', 'Drizzle', 'Partly Cloudy', 'Clear Sky'][i],
       rain: [2, 8, 0, 3, 1, 0][i],
     }));
     renderForecast(forecasts);
@@ -268,10 +283,12 @@
       if (data.recommendation) {
         currentAiRec = data.recommendation;
         box.textContent = data.recommendation;
-        document.getElementById('ai-source-badge').textContent = data.source === 'ai' ? '🤖 GROQ LLM' : '⚡ ADVISORY';
+        document.getElementById('ai-source-badge').textContent = data.source === 'ai' ? '🤖 AI ASSISTANT' : '⚡ ADVISORY';
       }
     } catch(err) {
-      box.textContent = "Heavy rain expected near Walhe stretch — delay departure by 1 hour. Recommended halt: Walhe Village Halt until conditions improve.";
+      box.textContent = lang === 'mr' 
+        ? "वाल्हे मार्गावर मुसळधार पाऊस अपेक्षित — प्रस्थान १ तास उशिरा करा. परिस्थिती सुधारेपर्यंत वाल्हे गाव थांब्यावर विश्रांती घ्या."
+        : "Heavy rain expected near Walhe stretch — delay departure by 1 hour. Recommended halt: Walhe Village Halt until conditions improve.";
       currentAiRec = box.textContent;
     }
   }
@@ -283,6 +300,11 @@
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    loadWeather();
+    loadAiRecommendation();
+  });
+
+  window.addEventListener('languageChanged', () => {
     loadWeather();
     loadAiRecommendation();
   });

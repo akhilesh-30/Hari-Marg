@@ -1419,10 +1419,28 @@ input, select, textarea { font-family: var(--font-body); }
   overflow-x: auto;
   padding: var(--space-sm) 0;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+  scroll-behavior: smooth;
 }
 
-.stops-slider::-webkit-scrollbar { display: none; }
+.stops-slider::-webkit-scrollbar {
+  height: 6px;
+}
+
+.stops-slider::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 9999px;
+}
+
+.stops-slider::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 9999px;
+}
+
+.stops-slider::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
 
 .stop-card {
   flex: 0 0 140px;

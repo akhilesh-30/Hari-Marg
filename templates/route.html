@@ -32,7 +32,13 @@
 
     <!-- Route Stops Slider / Grid -->
     <div>
-      <h2 class="mb-4 font-serif text-xl font-bold text-accent">Route Stops Schedule</h2>
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="font-serif text-xl font-bold text-accent">Route Stops Schedule</h2>
+        <div class="flex items-center gap-2">
+          <button class="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card font-sans font-bold text-accent transition-all hover:bg-primary hover:text-white" onclick="scrollStops(-300)" title="Scroll Left">◀</button>
+          <button class="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card font-sans font-bold text-accent transition-all hover:bg-primary hover:text-white" onclick="scrollStops(300)" title="Scroll Right">▶</button>
+        </div>
+      </div>
       <div class="stops-slider flex gap-3 overflow-x-auto pb-4" id="stops-slider">
         <!-- Populated by JS -->
       </div>
@@ -47,6 +53,11 @@
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 <script>
   let currentRoute = 'alandi';
+
+  function scrollStops(offset) {
+    const slider = document.getElementById('stops-slider');
+    if (slider) slider.scrollBy({ left: offset, behavior: 'smooth' });
+  }
 
   async function switchRoute(routeKey) {
     currentRoute = routeKey;
