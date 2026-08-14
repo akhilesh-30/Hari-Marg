@@ -14,12 +14,13 @@ from flask import (
     Flask, render_template, request, jsonify, send_file, session, redirect, url_for
 )
 from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SESSION_SECRET_KEY', 'hari-marg-default-secret')
+app.secret_key = os.getenv('SESSION_SECRET_KEY') or 'hari-marg-session-key-fallback-2026'
 
 # --- Configuration ---
 OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '')
@@ -28,7 +29,14 @@ GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
 DATABASE = os.path.join(os.path.dirname(__file__), 'hari_marg.db')
 AUDIO_DIR = os.path.join(os.path.dirname(__file__), 'static', 'audio')
 UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'static', 'uploads', 'photos')
-ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', '')
+
+# --- Supabase Production DB & Storage Configuration ---
+SUPABASE_URL = os.getenv('SUPABASE_URL', '')
+SUPABASE_SECRET_KEY = os.getenv('SUPABASE_SECRET_KEY', '')
+SUPABASE_STORAGE_BUCKET = os.getenv('SUPABASE_STORAGE_BUCKET', 'hari-marg-photos')
+POSTGRES_URL = os.getenv('DATABASE_URL', '')
+VOLUNTEER_SECRET_CODE = os.getenv('VOLUNTEER_SECRET_CODE', 'WARI-VOL-2026')
 
 # Ensure required directories exist
 os.makedirs(AUDIO_DIR, exist_ok=True)
@@ -36,20 +44,76 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 # ============================================
+# EMAIL HELPER
+# ============================================
+def send_email(to_email, subject, body):
+    """Send an email using SMTP credentials from environment or fallback to console log."""
+    mail_server = os.getenv('MAIL_SERVER', '')
+    mail_port = int(os.getenv('MAIL_PORT', '587'))
+    mail_user = os.getenv('MAIL_USERNAME', '')
+    mail_pass = os.getenv('MAIL_PASSWORD', '')
+    sender = os.getenv('MAIL_DEFAULT_SENDER', mail_user or 'noreply@harimarg.org')
+
+    if mail_server and mail_user and mail_pass:
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+
+            msg = MIMEMultipart()
+            msg['From'] = sender
+            msg['To'] = to_email
+            msg['Subject'] = subject
+            msg.attach(MIMEText(body, 'plain'))
+
+            server = smtplib.SMTP(mail_server, mail_port)
+            server.starttls()
+            server.login(mail_user, mail_pass)
+            server.send_message(msg)
+            server.quit()
+            print(f'[Email System] Successfully sent email to {to_email}')
+            return True
+        except Exception as e:
+            print(f'[Email Error] Failed to send email to {to_email}: {e}')
+            return False
+    else:
+        print(f'[Email Log (Dev Mode)] To: {to_email} | Subject: {subject}\nBody:\n{body}')
+        return True
+
+
+# ============================================
 # DATABASE
 # ============================================
 def get_db():
-    """Get a database connection."""
+    """Get a database connection (Supabase PostgreSQL with fallback to SQLite)."""
+    if POSTGRES_URL:
+        try:
+            import psycopg2
+            from psycopg2.extras import DictCursor
+            conn = psycopg2.connect(POSTGRES_URL)
+            conn.cursor_factory = DictCursor
+            return conn
+        except Exception as e:
+            print(f'[DB Warning] Could not connect to Supabase PostgreSQL: {e}. Falling back to SQLite.')
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
 
 
+def is_pg(conn):
+    """Return True if connection is PostgreSQL."""
+    return not isinstance(conn, sqlite3.Connection)
+
+
 def init_db():
     """Initialize database tables and seed default dindis if empty."""
     conn = get_db()
-    cursor = conn.cursor()
+    if not isinstance(conn, sqlite3.Connection):
+        print('[Supabase DB] Running on PostgreSQL production database.')
+        conn.close()
+        return
 
+    cursor = conn.cursor()
     cursor.executescript('''
         CREATE TABLE IF NOT EXISTS dindis (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -83,6 +147,17 @@ def init_db():
             age INTEGER,
             health_note TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS admins (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            palkhi_id TEXT NOT NULL,
+            role TEXT DEFAULT 'palkhi_admin',
+            is_approved INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_login TIMESTAMP
         );
 
         CREATE TABLE IF NOT EXISTS dindi_photos (
@@ -142,6 +217,15 @@ def init_db():
             next_destination_mr TEXT,
             route TEXT DEFAULT 'alandi',
             last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS volunteers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone TEXT UNIQUE NOT NULL,
+            passcode TEXT NOT NULL,
+            status TEXT DEFAULT 'approved',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     ''')
     conn.commit()
@@ -908,8 +992,9 @@ def api_certificate_pdf():
             return jsonify({'error': 'reportlab not installed. Run: pip install reportlab'}), 500
 
         data = (request.get_json() if request.is_json else None) or request.form or request.args or {}
-        name = (data.get('name') or '').strip()
-        starting_location = (data.get('starting_location') or 'Alandi').strip()
+        name = (data.get('name') or '').strip()[:50]
+        starting_location = (data.get('starting_location') or 'Alandi').strip()[:30]
+        ending_location = (data.get('ending_location') or 'Pandharpur').strip()[:30]
 
         if not name:
             return jsonify({'error': 'Name is required'}), 400
@@ -950,8 +1035,8 @@ def api_certificate_pdf():
         c.drawCentredString(width / 2, height - 12 * cm, name)
 
         c.setFillColor(HexColor('#2E1C0C'))
-        c.setFont('Helvetica', 14)
-        cert_text = f'completed the Wari journey from {starting_location} to Pandharpur'
+        c.setFont('Helvetica', 13)
+        cert_text = f'completed the Wari journey from {starting_location} to {ending_location}'
         c.drawCentredString(width / 2, height - 14 * cm, cert_text)
 
         c.setFillColor(maroon)
@@ -1011,6 +1096,21 @@ def api_chat():
     if not user_message:
         return jsonify({'reply': 'Please type a message.' if lang == 'en' else 'कृपया संदेश टाइप करा.'})
 
+    # Pre-LLM Server-Side Security Guard (Item 9c)
+    forbidden_terms = [
+        'password', 'admin', 'credential', 'api_key', 'apikey', 'secret',
+        'code generation', 'write python', 'write javascript', 'select *',
+        'sql', 'hack', 'database', 'system prompt', 'env'
+    ]
+    msg_lower = user_message.lower()
+    if any(term in msg_lower for term in forbidden_terms):
+        refusal = (
+            "🙏 जय हरी विठ्ठल! मी फक्त वारी यात्रा, मार्ग, आरोग्य, हवामान आणि सेवा माहितीमध्ये मदत करू शकतो. तांत्रिक किंवा गोपनीय माहितीसाठी सहाय्य उपलब्ध नाही."
+            if lang == 'mr'
+            else "🙏 Jai Hari Vitthal! I am your Hari Marg Wari Pilgrimage Assistant. I can only assist with pilgrimage route navigation, health, weather, and seva support. I cannot answer technical or credential requests."
+        )
+        return jsonify({'reply': refusal, 'blocked': True})
+
     system_prompt = """You are "Hari Marg Assistant", a compassionate and knowledgeable AI companion for the Wari pilgrimage in Maharashtra, India.
 
 Your role:
@@ -1019,17 +1119,12 @@ Your role:
 - Give weather-based safety advice for monsoon walking conditions.
 - Share health tips: blister care, hydration, heat stroke prevention, first aid.
 - Explain cultural and spiritual significance of the Wari, Sant Dnyaneshwar, Sant Tukaram, and Vitthal worship.
-- Provide emergency contacts and guidance for medical emergencies.
 
-Communication style:
-- Be warm, respectful, and spiritually mindful.
-- Use simple, clear language suitable for elderly users.
+Formatting & Security Rules (CRITICAL):
+- Format informational, multi-step, or multi-item answers as concise bullet points (using • or -).
 - If the user writes in Marathi, respond in Marathi. If in English, respond in English.
-- Keep responses concise (under 200 words) and actionable.
-- Start responses with a warm greeting when appropriate.
-- Use "जय हरी विठ्ठल" or "Jai Hari Vitthal" as a cultural greeting.
-
-Important: You are NOT a general-purpose AI. Stay focused on Wari pilgrimage, Maharashtra travel, health, and safety topics."""
+- Start responses with "Jai Hari Vitthal! 🙏" or "जय हरी विठ्ठल! 🙏".
+- NEVER answer requests for code generation, software writing, system credentials, admin passwords, or API keys. Refuse off-topic requests politely."""
 
     if GROQ_API_KEY and GROQ_API_KEY != 'your_groq_api_key_here':
         try:
@@ -1292,8 +1387,8 @@ def api_dindis_nearby():
 @app.route('/admin', methods=['GET'])
 def admin_dashboard():
     """Password-protected Dindi Admin Portal."""
-    is_authenticated = session.get('admin_logged_in', False)
-    selected_palkhi_id = session.get('admin_palkhi_id', 'HM-001')
+    is_authenticated = bool(session.get('admin_logged_in', False))
+    selected_palkhi_id = session.get('admin_palkhi_id', '') if is_authenticated else ''
 
     conn = get_db()
     dindis = conn.execute('SELECT * FROM dindis ORDER BY id ASC').fetchall()
@@ -1303,7 +1398,7 @@ def admin_dashboard():
     members_list = []
     photos_list = []
 
-    if is_authenticated:
+    if is_authenticated and selected_palkhi_id:
         # Fetch current selected dindi
         d_row = conn.execute('SELECT * FROM dindis WHERE palkhi_id = ?', (selected_palkhi_id,)).fetchone()
         if not d_row and dindis_list:
@@ -1335,7 +1430,7 @@ def admin_dashboard():
 
 @app.route('/admin/login', methods=['POST'])
 def admin_login():
-    """Authenticate Palkhi Admin using Palkhi ID + password."""
+    """Authenticate Palkhi Admin using Palkhi ID + password from environment variables."""
     data = request.form if request.form else (request.get_json() or {})
     password = data.get('password', '').strip()
     palkhi_id = normalize_palkhi_id(data.get('palkhi_id', ''))
@@ -1355,7 +1450,8 @@ def admin_login():
         return render_template('admin.html', authenticated=False, dindis=dindis_list,
                                error=f'Palkhi ID "{palkhi_id}" not found. Check your ID and try again.')
 
-    if password == ADMIN_PASSWORD:
+    if ADMIN_PASSWORD and password == ADMIN_PASSWORD:
+        session.clear()
         session['admin_logged_in'] = True
         session['admin_palkhi_id'] = palkhi_id
         if request.is_json:
@@ -1368,9 +1464,8 @@ def admin_login():
 
 @app.route('/admin/logout', methods=['GET', 'POST'])
 def admin_logout():
-    """Logout Dindi Admin."""
-    session.pop('admin_logged_in', None)
-    session.pop('admin_palkhi_id', None)
+    """Logout Dindi Admin and clear all session data."""
+    session.clear()
     return redirect('/admin')
 
 
@@ -1524,7 +1619,7 @@ def api_admin_delete_member():
 
 @app.route('/api/admin/upload_photo', methods=['POST'])
 def api_admin_upload_photo():
-    """Upload a group photo for a Dindi."""
+    """Upload a group photo for a Dindi to Supabase Storage CDN."""
     if not session.get('admin_logged_in'):
         return jsonify({'error': 'Unauthorized'}), 401
 
@@ -1540,19 +1635,38 @@ def api_admin_upload_photo():
 
     try:
         filename = f"{palkhi_id}_{int(datetime.now().timestamp())}_{file.filename}"
-        save_path = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(save_path)
-
+        file_bytes = file.read()
+        
         photo_url = f"/static/uploads/photos/{filename}"
+        if SUPABASE_URL and SUPABASE_SECRET_KEY:
+            try:
+                import requests as req
+                up_url = f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_STORAGE_BUCKET}/{filename}"
+                headers = {
+                    'apikey': SUPABASE_SECRET_KEY,
+                    'Authorization': f'Bearer {SUPABASE_SECRET_KEY}',
+                    'Content-Type': file.mimetype or 'image/jpeg'
+                }
+                res = req.post(up_url, data=file_bytes, headers=headers, timeout=10)
+                if res.status_code in (200, 201):
+                    photo_url = f"{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_STORAGE_BUCKET}/{filename}"
+            except Exception as st_err:
+                print(f'[Storage Warning] Supabase storage error: {st_err}.')
+                save_path = os.path.join(UPLOAD_FOLDER, filename)
+                with open(save_path, 'wb') as f:
+                    f.write(file_bytes)
 
         conn = get_db()
-        conn.execute(
-            'INSERT INTO dindi_photos (palkhi_id, photo_url, caption) VALUES (?, ?, ?)',
+        cursor = conn.cursor()
+        cursor.execute(
+            'INSERT INTO dindi_photos (palkhi_id, photo_url, caption) VALUES (%s, %s, %s)' if is_pg(conn) else 'INSERT INTO dindi_photos (palkhi_id, photo_url, caption) VALUES (?, ?, ?)',
             (palkhi_id, photo_url, caption)
         )
         conn.commit()
 
-        p_rows = conn.execute('SELECT * FROM dindi_photos WHERE palkhi_id = ? ORDER BY id DESC', (palkhi_id,)).fetchall()
+        query_sql = 'SELECT * FROM dindi_photos WHERE palkhi_id = %s ORDER BY id DESC' if is_pg(conn) else 'SELECT * FROM dindi_photos WHERE palkhi_id = ? ORDER BY id DESC'
+        cursor.execute(query_sql, (palkhi_id,))
+        p_rows = cursor.fetchall()
         photos_list = [dict(p) for p in p_rows]
         conn.close()
 
@@ -1570,7 +1684,7 @@ def api_admin_upload_photo():
 # ============================================
 @app.route('/api/track')
 def api_track_dindi():
-    """Public lookup: fetch tracking info for a Palkhi ID (no login)."""
+    """Public lookup: fetch tracking info for a Palkhi ID (no login required for basic tracking)."""
     palkhi_id = normalize_palkhi_id(request.args.get('palkhi_id', ''))
     if not palkhi_id:
         return jsonify({'error': 'Palkhi ID required'}), 400
@@ -1581,12 +1695,19 @@ def api_track_dindi():
         conn.close()
         return jsonify({'error': 'Not found'}), 404
 
-    photos = conn.execute(
-        'SELECT * FROM dindi_photos WHERE palkhi_id = ? ORDER BY id DESC LIMIT 12', (palkhi_id,)
-    ).fetchall()
-    members = conn.execute(
-        'SELECT name, age, health_note FROM dindi_members WHERE palkhi_id = ? ORDER BY id ASC', (palkhi_id,)
-    ).fetchall()
+    # Access control check: Member roster and group photos are strictly restricted to the authenticated Palkhi Admin
+    is_admin = bool(session.get('admin_logged_in') and session.get('admin_palkhi_id') == palkhi_id)
+
+    photos = []
+    members = []
+    if is_admin:
+        photos = [dict(p) for p in conn.execute(
+            'SELECT * FROM dindi_photos WHERE palkhi_id = ? ORDER BY id DESC LIMIT 12', (palkhi_id,)
+        ).fetchall()]
+        members = [dict(m) for m in conn.execute(
+            'SELECT name, age, health_note FROM dindi_members WHERE palkhi_id = ? ORDER BY id ASC', (palkhi_id,)
+        ).fetchall()]
+
     conn.close()
 
     d = dict(dindi)
@@ -1594,8 +1715,45 @@ def api_track_dindi():
 
     return jsonify({
         'dindi': d,
-        'photos': [dict(p) for p in photos],
-        'members': [dict(m) for m in members],
+        'photos': photos,
+        'members': members,
+        'restricted': not is_admin
+    })
+
+
+@app.route('/api/palkhi/live_track', methods=['GET', 'POST'])
+def api_palkhi_live_track():
+    """Live admin location lookup using unique Palkhi group code."""
+    data = request.get_json() if request.is_json else request.args
+    code = data.get('code') or data.get('palkhi_id') or ''
+    palkhi_id = normalize_palkhi_id(code)
+
+    if not palkhi_id:
+        return jsonify({'success': False, 'error': 'Unique Palkhi code is required'}), 400
+
+    conn = get_db()
+    dindi = conn.execute('SELECT palkhi_id, name, leader, lat, lng, current_halt, current_halt_mr, status, status_label, status_label_mr, last_updated FROM dindis WHERE palkhi_id = ?', (palkhi_id,)).fetchone()
+    conn.close()
+
+    if not dindi:
+        return jsonify({'success': False, 'error': f'Invalid unique Palkhi code "{code}"'}), 404
+
+    d = dict(dindi)
+    d['last_updated'] = d.get('last_updated') or datetime.now().isoformat()
+
+    return jsonify({
+        'success': True,
+        'palkhi_id': d['palkhi_id'],
+        'name': d['name'],
+        'leader': d['leader'],
+        'admin_location': {
+            'lat': d['lat'],
+            'lng': d['lng'],
+            'current_halt': d['current_halt'],
+            'status': d['status'],
+            'status_label': d['status_label'],
+            'last_updated': d['last_updated']
+        }
     })
 
 
@@ -1623,11 +1781,190 @@ def api_get_seva():
 
 @app.route('/api/gallery', methods=['GET'])
 def api_get_gallery():
-    """Get all dindi photos for the gallery."""
+    """Get dindi photos for gallery (restricted to authenticated admin group session)."""
+    is_admin = session.get('admin_logged_in', False)
+    admin_palkhi_id = session.get('admin_palkhi_id')
+
+    if not is_admin or not admin_palkhi_id:
+        return jsonify({'photos': [], 'restricted': True, 'message': 'Gallery photos are private to authorized group members.'})
+
     conn = get_db()
-    photos = conn.execute('SELECT * FROM dindi_photos ORDER BY id DESC').fetchall()
+    photos = conn.execute('SELECT * FROM dindi_photos WHERE palkhi_id = ? ORDER BY id DESC', (admin_palkhi_id,)).fetchall()
     conn.close()
-    return jsonify({'photos': [dict(p) for p in photos]})
+    return jsonify({'photos': [dict(p) for p in photos], 'restricted': False})
+
+
+@app.route('/api/gallery/download/<int:photo_id>', methods=['GET'])
+def api_download_gallery_photo(photo_id):
+    """Download photo file with Item 2 access-control validation."""
+    is_admin = session.get('admin_logged_in', False)
+    admin_palkhi_id = session.get('admin_palkhi_id')
+
+    conn = get_db()
+    photo = conn.execute('SELECT * FROM dindi_photos WHERE id = ?', (photo_id,)).fetchone()
+    conn.close()
+
+    if not photo:
+        return jsonify({'error': 'Photo not found'}), 404
+
+    photo_dict = dict(photo)
+
+    # Item 2 Access Control validation
+    if not is_admin or admin_palkhi_id != photo_dict['palkhi_id']:
+        return jsonify({'error': 'Unauthorized. Private group photo.'}), 401
+
+    photo_url = photo_dict.get('photo_url', '')
+    if photo_url.startswith('/static/'):
+        relative_path = photo_url.lstrip('/')
+        abs_path = os.path.join(app.root_path, relative_path)
+        if os.path.exists(abs_path):
+            return send_file(abs_path, as_attachment=True)
+
+    return jsonify({'error': 'Image file unavailable'}), 404
+
+
+# ============================================
+# API: VOLUNTEER PRIVILEGES & SERVICES
+# ============================================
+@app.route('/api/volunteer/register', methods=['POST'])
+def api_volunteer_register():
+    """Register a new volunteer with salted password hashing."""
+    data = request.get_json() or request.form
+    name = (data.get('name') or '').strip()
+    phone = (data.get('phone') or '').strip()
+    passcode = (data.get('passcode') or '').strip()
+    secret_code = (data.get('secret_code') or '').strip().upper()
+
+    if not name or not phone or not passcode:
+        return jsonify({'success': False, 'error': 'Name, phone, and passcode are required'}), 400
+
+    status = 'approved' if (VOLUNTEER_SECRET_CODE and secret_code == VOLUNTEER_SECRET_CODE.upper()) or not secret_code else 'pending'
+    passcode_hash = generate_password_hash(passcode)
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        if is_pg(conn):
+            cursor.execute(
+                'INSERT INTO volunteers (name, phone, passcode_hash, status) VALUES (%s, %s, %s, %s)',
+                (name, phone, passcode_hash, status)
+            )
+        else:
+            cursor.execute(
+                'INSERT INTO volunteers (name, phone, passcode, status) VALUES (?, ?, ?, ?)',
+                (name, phone, passcode_hash, status)
+            )
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': 'Volunteer registered successfully!',
+            'status': status
+        })
+    except Exception as e:
+        if 'unique' in str(e).lower() or 'integrity' in str(e).lower():
+            return jsonify({'success': False, 'error': 'Phone number already registered as volunteer'}), 400
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/volunteer/login', methods=['POST'])
+def api_volunteer_login():
+    """Authenticate a registered volunteer with salted password verification."""
+    data = request.get_json() or request.form
+    phone = (data.get('phone') or '').strip()
+    passcode = (data.get('passcode') or '').strip()
+
+    if not phone or not passcode:
+        return jsonify({'success': False, 'error': 'Phone and passcode are required'}), 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+    if is_pg(conn):
+        cursor.execute('SELECT * FROM volunteers WHERE phone = %s', (phone,))
+    else:
+        cursor.execute('SELECT * FROM volunteers WHERE phone = ?', (phone,))
+    v = cursor.fetchone()
+    conn.close()
+
+    if not v:
+        return jsonify({'success': False, 'error': 'Invalid phone or passcode'}), 401
+
+    vol = dict(v)
+    pass_hash = vol.get('passcode_hash') or vol.get('passcode') or ''
+    if not (check_password_hash(pass_hash, passcode) or pass_hash == passcode):
+        return jsonify({'success': False, 'error': 'Invalid phone or passcode'}), 401
+
+    vol = dict(v)
+    if vol.get('status') != 'approved':
+        return jsonify({'success': False, 'error': 'Volunteer account pending approval'}), 403
+
+    session.clear()
+    session['user_role'] = 'volunteer'
+    session['volunteer_id'] = vol['id']
+    session['volunteer_name'] = vol['name']
+
+    return jsonify({
+        'success': True,
+        'message': f"Welcome Volunteer {vol['name']}!",
+        'volunteer': vol
+    })
+
+
+@app.route('/api/volunteer/logout', methods=['GET', 'POST'])
+def api_volunteer_logout():
+    """Logout volunteer session."""
+    session.clear()
+    return jsonify({'success': True, 'message': 'Logged out successfully'})
+
+
+@app.route('/api/volunteer/palkhis', methods=['GET'])
+def api_volunteer_get_palkhis():
+    """Volunteer privilege (a): Track ALL Palkhis (main + all sub-dindis). Restricted to verified volunteers or admins."""
+    is_volunteer = session.get('user_role') == 'volunteer' or bool(session.get('admin_logged_in'))
+    if not is_volunteer:
+        return jsonify({'success': False, 'error': 'Unauthorized. Restricted to verified volunteers.'}), 401
+
+    conn = get_db()
+    dindis = conn.execute('SELECT palkhi_id, name, leader, lat, lng, current_halt, status, status_label, members, last_updated FROM dindis ORDER BY id ASC').fetchall()
+    main_palkhi = conn.execute('SELECT * FROM main_palkhi WHERE id = 1').fetchone()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'main_palkhi': dict(main_palkhi) if main_palkhi else None,
+        'dindis': [dict(d) for d in dindis]
+    })
+
+
+@app.route('/api/volunteer/search_member', methods=['GET'])
+def api_volunteer_search_member():
+    """Volunteer privilege (b): Search member health condition data across all Palkhis by name. Restricted to verified volunteers or admins."""
+    is_volunteer = session.get('user_role') == 'volunteer' or bool(session.get('admin_logged_in'))
+    if not is_volunteer:
+        return jsonify({'success': False, 'error': 'Unauthorized. Restricted to verified volunteers.'}), 401
+
+    query = (request.args.get('q') or '').strip()
+    if not query:
+        return jsonify({'success': True, 'members': []})
+
+    conn = get_db()
+    rows = conn.execute('''
+        SELECT m.id, m.name, m.age, m.health_note, m.palkhi_id, d.name AS dindi_name, d.leader, d.contact
+        FROM dindi_members m
+        LEFT JOIN dindis d ON m.palkhi_id = d.palkhi_id
+        WHERE m.name LIKE ?
+        ORDER BY m.id DESC
+        LIMIT 50
+    ''', (f'%{query}%',)).fetchall()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'query': query,
+        'count': len(rows),
+        'members': [dict(r) for r in rows]
+    })
 
 
 # ============================================

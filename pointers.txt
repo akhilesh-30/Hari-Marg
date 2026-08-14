@@ -1,0 +1,19 @@
+1. Palki members data visible to guest login
+images uploaded also visible to guest login
+safety advisory language translation
+add direction feature for cards in near members
+add scroll bar in route page to scroll through the data/place cards
+user locn pin to highlighted near me help places logo to be minimsed
+volunteers registratioon and some privilages of admin
+optimise chatbot and make it more responsive and limit its response prompts/answers
+dindi admin panel having a button to open the panel without asking for credentials and opening previously opened admin's panel
+remove personal profile entirely 
+redundant seva offer registration/form filling in profile section
+imrpove cetificate
+voice-over in website to be manual
+open option for input
+improve database handling and use a proper database system 
+change the images used as dummy photos for the upload photo section and make it so that the images are visible
+(qol: add image navbar in the uploaded pics section)
+when someone registers for seva daan rathers than them having to manually enter their location details automatically fetch the details and autofill
+also in the entire application where ever the words groq llm or other names are explicitly placed  on the frontend open for the user remove them

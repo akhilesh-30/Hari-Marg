@@ -17,25 +17,36 @@
   </div>
 
   <form id="cert-form" onsubmit="generateCert(event)">
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px;">
       <div class="form-group" style="margin-bottom:0; text-align:left;">
-        <label class="form-label">Pilgrim Full Name / वारकऱ्याचे पूर्ण नाव *</label>
-        <input type="text" id="cert-name" class="form-input" placeholder="e.g. Ramesh Pandurang Patil" required style="font-size: 1.05rem;">
+        <label class="form-label">Pilgrim Full Name / वारकऱ्याचे नाव *</label>
+        <input type="text" id="cert-name" class="form-input" placeholder="e.g. Ramesh Pandurang Patil" required maxlength="60" style="font-size: 1.05rem;">
       </div>
 
       <div class="form-group" style="margin-bottom:0; text-align:left;">
-        <label class="form-label">Starting Location / प्रस्थान ठिकाण *</label>
-        <input type="text" id="cert-start-loc" class="form-input" placeholder="e.g. Alandi" required value="Alandi" list="start-loc-list" style="font-size: 1.05rem;">
-        <datalist id="start-loc-list">
-          <option value="Alandi"></option>
-          <option value="Dehu"></option>
-          <option value="Pune"></option>
-          <option value="Saswad"></option>
-          <option value="Jejuri"></option>
-          <option value="Lonand"></option>
-          <option value="Phaltan"></option>
-        </datalist>
+        <label class="form-label">Starting Location / प्रस्थान *</label>
+        <input type="text" id="cert-start-loc" class="form-input" placeholder="e.g. Alandi" required value="Alandi" maxlength="40" list="route-loc-list" style="font-size: 1.05rem;">
       </div>
+
+      <div class="form-group" style="margin-bottom:0; text-align:left;">
+        <label class="form-label">Ending Location / समाप्ती *</label>
+        <input type="text" id="cert-end-loc" class="form-input" placeholder="e.g. Pandharpur" required value="Pandharpur" maxlength="40" list="route-loc-list" style="font-size: 1.05rem;">
+      </div>
+
+      <datalist id="route-loc-list">
+        <option value="Alandi"></option>
+        <option value="Dehu"></option>
+        <option value="Pune"></option>
+        <option value="Saswad"></option>
+        <option value="Jejuri"></option>
+        <option value="Lonand"></option>
+        <option value="Phaltan"></option>
+        <option value="Natepute"></option>
+        <option value="Malshiras"></option>
+        <option value="Velapur"></option>
+        <option value="Wakhari"></option>
+        <option value="Pandharpur"></option>
+      </datalist>
     </div>
 
     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -64,7 +75,7 @@
       </div>
 
       <div class="cert-body-text">
-        has successfully completed the sacred Wari walking pilgrimage covering the route from <strong id="cert-display-loc" style="color:var(--accent);">Alandi</strong> to <strong>Pandharpur</strong> (~240 km).
+        has successfully completed the sacred Wari walking pilgrimage covering the route from <strong id="cert-display-start-loc" style="color:var(--accent);">Alandi</strong> to <strong id="cert-display-end-loc" style="color:var(--accent);">Pandharpur</strong>.
       </div>
 
       <div style="font-family: var(--font-display); font-size: 1.3rem; color: var(--accent); margin-top: 16px;">
@@ -91,7 +102,8 @@
   function generateCert(e) {
     if (e) e.preventDefault();
     const name = document.getElementById('cert-name').value.trim();
-    const loc = document.getElementById('cert-start-loc').value.trim() || 'Alandi';
+    const startLoc = document.getElementById('cert-start-loc').value.trim() || 'Alandi';
+    const endLoc = document.getElementById('cert-end-loc').value.trim() || 'Pandharpur';
 
     if (!name) {
       HariMarg.showToast('Please enter pilgrim name');
@@ -99,7 +111,8 @@
     }
 
     document.getElementById('cert-display-name').textContent = name;
-    document.getElementById('cert-display-loc').textContent = loc;
+    document.getElementById('cert-display-start-loc').textContent = startLoc;
+    document.getElementById('cert-display-end-loc').textContent = endLoc;
     document.getElementById('cert-display-date').textContent = `Issued on ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`;
     document.getElementById('certificate-preview-container').style.display = 'block';
 
@@ -108,7 +121,8 @@
 
   function downloadPdfDirect() {
     const name = document.getElementById('cert-name').value.trim();
-    const loc = document.getElementById('cert-start-loc').value.trim() || 'Alandi';
+    const startLoc = document.getElementById('cert-start-loc').value.trim() || 'Alandi';
+    const endLoc = document.getElementById('cert-end-loc').value.trim() || 'Pandharpur';
 
     if (!name) {
       HariMarg.showToast('Please enter pilgrim name first');
@@ -116,8 +130,7 @@
     }
 
     HariMarg.showToast('Preparing PDF download...');
-    // Direct browser file download from reportlab endpoint
-    const url = `/api/certificate/pdf?name=${encodeURIComponent(name)}&starting_location=${encodeURIComponent(loc)}`;
+    const url = `/api/certificate/pdf?name=${encodeURIComponent(name)}&starting_location=${encodeURIComponent(startLoc)}&ending_location=${encodeURIComponent(endLoc)}`;
     window.location.href = url;
   }
 </script>

@@ -47,7 +47,10 @@
           </div>
 
           <div>
-            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground" for="s_location">Location *</label>
+            <div class="mb-1 flex items-center justify-between">
+              <label class="block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground" for="s_location">Location *</label>
+              <button type="button" class="font-sans text-[11px] font-semibold text-primary hover:underline" onclick="autofillSevaLocation()">📍 Auto-Detect / वर्तमान ठिकाण</button>
+            </div>
             <input type="text" id="s_location" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="e.g. Saswad Phata Main Road" required>
           </div>
         </div>
@@ -63,6 +66,90 @@
       </form>
 
       <div id="seva-msg" class="hidden mt-4 rounded-xl p-4 text-center font-sans text-sm font-semibold"></div>
+    </div>
+
+    <!-- VERIFIED VOLUNTEER PRIVILEGE PORTAL CARD -->
+    <div class="card p-6 sm:p-8 border-l-4 border-accent">
+      <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent/10 text-2xl text-accent">🩺</span>
+          <div>
+            <h2 class="font-serif text-xl font-bold text-accent">Volunteer Services Portal / स्वयंसेवक पोर्टल</h2>
+            <p class="font-sans text-xs text-muted-foreground">Authorized access: Track all Palkhis and search Warkari health condition records by name</p>
+          </div>
+        </div>
+        <div id="vol-auth-status">
+          <span class="rounded-full bg-secondary px-3.5 py-1 font-sans text-xs font-semibold text-muted-foreground">Status: Not Authenticated</span>
+        </div>
+      </div>
+
+      <!-- VOLUNTEER AUTH FORM (shown if not logged in) -->
+      <div id="vol-login-panel" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- REGISTER -->
+        <div class="rounded-2xl border border-border bg-secondary/30 p-5">
+          <h3 class="mb-3 font-serif text-base font-bold text-accent">Register New Volunteer</h3>
+          <div class="flex flex-col gap-3">
+            <input type="text" id="v_reg_name" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Full Name">
+            <input type="tel" id="v_reg_phone" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Phone Number">
+            <input type="password" id="v_reg_pass" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Set Passcode">
+            <input type="text" id="v_reg_code" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Volunteer Code (e.g. WARI-VOL-2026)">
+            <button class="rounded-xl bg-accent px-4 py-2.5 font-sans text-sm font-semibold text-accent-foreground shadow-sm hover:brightness-105" onclick="registerVolunteer()">
+              Register Volunteer
+            </button>
+          </div>
+        </div>
+
+        <!-- LOGIN -->
+        <div class="rounded-2xl border border-border bg-secondary/30 p-5 flex flex-col justify-between">
+          <div>
+            <h3 class="mb-3 font-serif text-base font-bold text-accent">Volunteer Login</h3>
+            <div class="flex flex-col gap-3">
+              <input type="tel" id="v_login_phone" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Phone Number">
+              <input type="password" id="v_login_pass" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Passcode">
+              <button class="rounded-xl bg-primary px-4 py-2.5 font-sans text-sm font-semibold text-primary-foreground shadow-sm hover:brightness-105" onclick="loginVolunteer()">
+                🔑 Login as Volunteer
+              </button>
+            </div>
+          </div>
+          <div id="v_auth_msg" class="hidden mt-3 font-sans text-xs font-semibold text-destructive"></div>
+        </div>
+      </div>
+
+      <!-- VOLUNTEER PRIVILEGES DASHBOARD (shown if logged in) -->
+      <div id="vol-dashboard-panel" class="hidden flex-col gap-6">
+        <!-- SEARCH MEMBER HEALTH RECORDS BY NAME -->
+        <div class="rounded-2xl border border-border bg-card p-5">
+          <h3 class="mb-2 font-serif text-base font-bold text-accent">🔍 Search Member Health Conditions by Name</h3>
+          <p class="mb-4 font-sans text-xs text-muted-foreground">Search across all Palkhis for specific Warkari health records, medical alerts, and emergency contact details.</p>
+          
+          <div class="flex gap-3 mb-4">
+            <input type="text" id="v_search_query" class="flex-1 rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Type member name (e.g. Ramesh, Shantabai, Namdev)..." onkeypress="if(event.key==='Enter')searchMemberHealth()">
+            <button class="rounded-xl bg-primary px-6 py-2.5 font-sans text-sm font-semibold text-primary-foreground shadow-sm hover:brightness-105" onclick="searchMemberHealth()">
+              Search
+            </button>
+          </div>
+
+          <div id="v_member_results" class="max-h-[300px] overflow-y-auto space-y-2">
+            <p class="text-xs text-muted-foreground italic">Enter a name above to search member health records...</p>
+          </div>
+        </div>
+
+        <!-- TRACK ALL PALKHIS OVERVIEW -->
+        <div class="rounded-2xl border border-border bg-card p-5">
+          <div class="mb-3 flex items-center justify-between">
+            <h3 class="font-serif text-base font-bold text-accent">📍 All Palkhis Live Status & Coordinates</h3>
+            <button class="rounded-full border border-border bg-secondary px-3 py-1 font-sans text-xs font-semibold text-accent hover:bg-primary hover:text-white" onclick="loadVolunteerPalkhis()">🔄 Refresh Locations</button>
+          </div>
+          <div id="v_palkhi_list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            <p class="text-xs text-muted-foreground italic">Loading all Palkhi locations...</p>
+          </div>
+        </div>
+
+        <button class="self-end inline-flex items-center gap-2 rounded-full border border-destructive/30 bg-destructive/10 px-5 py-2 font-sans text-xs font-semibold text-destructive hover:bg-destructive hover:text-white" onclick="logoutVolunteer()">
+          Logout Volunteer Session
+        </button>
+      </div>
+
     </div>
 
     <!-- ACTIVE SEVA POSTS SECTION -->
@@ -98,6 +185,21 @@
 <script>
   let allSevaData = [];
   let currentSevaCategory = 'all';
+
+  async function autofillSevaLocation() {
+    const locInput = document.getElementById('s_location');
+    locInput.placeholder = '📍 Detecting location...';
+    try {
+      const loc = await HariMarg.getLocation();
+      if (loc && loc.lat && loc.lng) {
+        locInput.value = `Near GPS (${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)})`;
+        HariMarg.showToast('Location auto-detected!');
+      }
+    } catch(err) {
+      HariMarg.showToast('Could not auto-detect location');
+      locInput.placeholder = 'e.g. Saswad Phata Main Road';
+    }
+  }
 
   async function submitSevaOffering(e) {
     e.preventDefault();
@@ -219,6 +321,155 @@
 
     const lang = (typeof HariMarg !== 'undefined' && HariMarg.lang) ? HariMarg.lang : 'en';
     list.innerHTML = renderSevaPosts(normalised, lang);
+  }
+
+  // --- VOLUNTEER SYSTEM JS ---
+  async function registerVolunteer() {
+    const name = document.getElementById('v_reg_name').value.trim();
+    const phone = document.getElementById('v_reg_phone').value.trim();
+    const passcode = document.getElementById('v_reg_pass').value.trim();
+    const secret_code = document.getElementById('v_reg_code').value.trim();
+
+    if (!name || !phone || !passcode) {
+      alert('Please enter your name, phone number, and passcode.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/volunteer/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, passcode, secret_code })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        alert(data.message);
+        document.getElementById('v_login_phone').value = phone;
+        document.getElementById('v_login_pass').value = passcode;
+        loginVolunteer();
+      } else {
+        alert(data.error || 'Volunteer registration failed.');
+      }
+    } catch(err) {
+      alert('Error registering volunteer.');
+    }
+  }
+
+  async function loginVolunteer() {
+    const phone = document.getElementById('v_login_phone').value.trim();
+    const passcode = document.getElementById('v_login_pass').value.trim();
+    const msg = document.getElementById('v_auth_msg');
+
+    if (!phone || !passcode) {
+      msg.textContent = 'Please enter your phone number and passcode.';
+      msg.classList.remove('hidden');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/volunteer/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, passcode })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        msg.classList.add('hidden');
+        document.getElementById('vol-login-panel').classList.add('hidden');
+        document.getElementById('vol-dashboard-panel').classList.remove('hidden');
+        document.getElementById('vol-dashboard-panel').classList.add('flex');
+        document.getElementById('vol-auth-status').innerHTML = `<span class="rounded-full bg-emerald-500/10 px-3.5 py-1 font-sans text-xs font-bold text-emerald-600">✓ Verified Volunteer: ${data.volunteer.name}</span>`;
+        loadVolunteerPalkhis();
+      } else {
+        msg.textContent = data.error || 'Invalid credentials or account pending approval.';
+        msg.classList.remove('hidden');
+      }
+    } catch(err) {
+      msg.textContent = 'Login failed.';
+      msg.classList.remove('hidden');
+    }
+  }
+
+  async function logoutVolunteer() {
+    await fetch('/api/volunteer/logout');
+    document.getElementById('vol-login-panel').classList.remove('hidden');
+    document.getElementById('vol-dashboard-panel').classList.add('hidden');
+    document.getElementById('vol-dashboard-panel').classList.remove('flex');
+    document.getElementById('vol-auth-status').innerHTML = '<span class="rounded-full bg-secondary px-3.5 py-1 font-sans text-xs font-semibold text-muted-foreground">Status: Not Authenticated</span>';
+  }
+
+  async function searchMemberHealth() {
+    const q = document.getElementById('v_search_query').value.trim();
+    const container = document.getElementById('v_member_results');
+
+    if (!q) {
+      container.innerHTML = '<p class="text-xs text-muted-foreground italic">Please enter a name to search.</p>';
+      return;
+    }
+
+    container.innerHTML = '<span class="loading-spinner text-xs">Searching member health records...</span>';
+
+    try {
+      const res = await fetch(`/api/volunteer/search_member?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+
+      if (!data.success || !data.members || data.members.length === 0) {
+        container.innerHTML = `<p class="text-xs text-destructive">No member health records matching "${q}" found across Palkhis.</p>`;
+        return;
+      }
+
+      container.innerHTML = data.members.map(m => {
+        const isAlert = m.health_note && (m.health_note.includes('Diabetic') || m.health_note.includes('Blisters') || m.health_note.includes('Hypertension') || m.health_note.includes('Asthma'));
+        return `
+          <div class="rounded-xl border border-border bg-card p-3 text-xs">
+            <div class="flex items-center justify-between font-bold">
+              <span class="text-accent text-sm">${m.name} (Age ${m.age || 'N/A'})</span>
+              <span class="rounded-full bg-primary/10 px-2 py-0.5 font-sans text-[10px] text-primary">${m.palkhi_id} — ${m.dindi_name || 'Dindi'}</span>
+            </div>
+            <div class="mt-1 ${isAlert ? 'text-destructive font-semibold' : 'text-emerald-700'}">
+              ${isAlert ? '⚠️ Emergency Health Note: ' : '✔️ Health Note: '}${m.health_note || 'Healthy'}
+            </div>
+            <div class="mt-1 text-[11px] text-muted-foreground">
+              Group Leader: <strong>${m.leader || 'Admin'}</strong> ${m.contact ? `· Contact: <a href="tel:${m.contact}" class="text-primary font-semibold">${m.contact}</a>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch(err) {
+      container.innerHTML = '<p class="text-xs text-destructive">Failed to search member records.</p>';
+    }
+  }
+
+  async function loadVolunteerPalkhis() {
+    const container = document.getElementById('v_palkhi_list');
+    container.innerHTML = '<span class="loading-spinner text-xs">Loading all Palkhi live locations...</span>';
+
+    try {
+      const res = await fetch('/api/volunteer/palkhis');
+      const data = await res.json();
+
+      if (!data.success || !data.dindis) {
+        container.innerHTML = '<p class="text-xs text-destructive">Unauthorized or failed to load Palkhi list.</p>';
+        return;
+      }
+
+      container.innerHTML = data.dindis.map(d => `
+        <div class="rounded-xl border border-border bg-secondary/30 p-3 text-xs">
+          <div class="flex items-center justify-between font-bold">
+            <span class="text-primary">${d.palkhi_id}</span>
+            <span class="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] text-accent">${d.status}</span>
+          </div>
+          <div class="mt-1 font-semibold text-foreground truncate">${d.name}</div>
+          <div class="mt-1 text-muted-foreground">Halt: ${d.current_halt} · Members: ${d.members}</div>
+          <div class="mt-1 font-mono text-[10px] text-muted-foreground">GPS: ${d.lat ? d.lat.toFixed(4) : '--'}, ${d.lng ? d.lng.toFixed(4) : '--'}</div>
+          ${d.lat && d.lng ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}" target="_blank" class="mt-1 inline-block text-[10px] font-semibold text-primary hover:underline">🗺️ Map Route</a>` : ''}
+        </div>
+      `).join('');
+    } catch(err) {
+      container.innerHTML = '<p class="text-xs text-destructive">Error loading Palkhi locations.</p>';
+    }
   }
 
   document.addEventListener('DOMContentLoaded', loadSeva);

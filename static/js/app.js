@@ -132,27 +132,96 @@ const HariMarg = {
 
   // ---- Geolocation ----
   currentLocation: null,
+  pendingLocationResolve: null,
+
+  showLocationModal() {
+    const modal = document.getElementById('location-permission-modal');
+    if (!modal) return;
+    const titleEl = document.getElementById('loc-modal-title');
+    const bodyEl = document.getElementById('loc-modal-body');
+    const btnEl = document.getElementById('loc-modal-allow-btn');
+
+    if (this.lang === 'mr') {
+      if (titleEl) titleEl.textContent = '📍 वारी सेवांसाठी स्थान (Location) परवानगी आवश्यक आहे';
+      if (bodyEl) bodyEl.textContent = 'जवळचे अन्नदान, पाणी, वैद्यकीय शिबिरे आणि अचूक मार्ग दाखवण्यासाठी स्थान परवानगी आवश्यक आहे. परवानगीशिवाय काही वैशिष्ट्ये योग्यरीत्या कार्य करणार नाहीत.';
+      if (btnEl) btnEl.textContent = '📍 स्थान परवानगी द्या';
+    } else {
+      if (titleEl) titleEl.textContent = '📍 Location Access Required for Wari Features';
+      if (bodyEl) bodyEl.textContent = 'Location access is necessary to calculate distances to nearby medical camps, water points, food stalls, and show turn-by-turn walking routes. Some features will not work optimally without it.';
+      if (btnEl) btnEl.textContent = '📍 Allow Location Access';
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  },
+
+  dismissLocationModal() {
+    const modal = document.getElementById('location-permission-modal');
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+    if (this.pendingLocationResolve) {
+      const defaultLoc = { lat: 18.5204, lng: 73.8567 };
+      this.currentLocation = defaultLoc;
+      this.pendingLocationResolve(defaultLoc);
+      this.pendingLocationResolve = null;
+    }
+  },
+
+  confirmLocationPermission() {
+    this.dismissLocationModal();
+    if (!navigator.geolocation) {
+      if (this.pendingLocationResolve) {
+        const defaultLoc = { lat: 18.5204, lng: 73.8567 };
+        this.currentLocation = defaultLoc;
+        this.pendingLocationResolve(defaultLoc);
+        this.pendingLocationResolve = null;
+      }
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        this.currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        localStorage.setItem('hm_user_lat', pos.coords.latitude);
+        localStorage.setItem('hm_user_lng', pos.coords.longitude);
+        localStorage.setItem('hm_loc_perm', 'granted');
+        if (this.pendingLocationResolve) {
+          this.pendingLocationResolve(this.currentLocation);
+          this.pendingLocationResolve = null;
+        }
+      },
+      (err) => {
+        const defaultLoc = { lat: 18.5204, lng: 73.8567 };
+        this.currentLocation = defaultLoc;
+        if (this.pendingLocationResolve) {
+          this.pendingLocationResolve(defaultLoc);
+          this.pendingLocationResolve = null;
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  },
 
   getLocation() {
     return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error('Geolocation not supported'));
+      if (localStorage.getItem('hm_loc_perm') === 'granted' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            this.currentLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            resolve(this.currentLocation);
+          },
+          () => {
+            this.currentLocation = { lat: 18.5204, lng: 73.8567 };
+            resolve(this.currentLocation);
+          }
+        );
         return;
       }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          this.currentLocation = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          };
-          resolve(this.currentLocation);
-        },
-        (err) => {
-          this.currentLocation = { lat: 18.5204, lng: 73.8567 };
-          resolve(this.currentLocation);
-        },
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
+
+      this.pendingLocationResolve = resolve;
+      this.showLocationModal();
     });
   },
 

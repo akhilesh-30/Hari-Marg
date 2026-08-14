@@ -193,10 +193,7 @@
 
     <div class="form-group" style="text-align: left;">
       <label class="form-label">Admin Password / पासवर्ड</label>
-      <input type="password" name="password" class="form-input" placeholder="Enter admin password" required value="admin123">
-      <div style="font-size: 0.78rem; color: var(--text-light); margin-top: 4px;">
-        💡 Demo default password: <code style="background:rgba(232,112,58,0.1); padding:2px 6px; border-radius:4px; font-weight:bold;">admin123</code>
-      </div>
+      <input type="password" name="password" class="form-input" placeholder="Enter admin password" required>
     </div>
 
     <button type="submit" class="btn btn-primary btn-block" style="margin-top: 16px;">
@@ -421,7 +418,7 @@
   <div class="photos-grid" id="photos-grid">
     {% if photos %}
     {% for p in photos %}
-    <div class="photo-thumb-card">
+    <div class="photo-thumb-card" style="cursor:pointer;" onclick="openAdminPhotoModal('{{ p.photo_url }}', '{{ p.caption }}', '{{ p.palkhi_id }}')">
       <img src="{{ p.photo_url }}" alt="{{ p.caption }}" onerror="this.src='https://images.unsplash.com/photo-1544717305-2782549b5136?w=300&q=80'">
       <div class="photo-thumb-caption" title="{{ p.caption }}">{{ p.caption }}</div>
     </div>
@@ -431,6 +428,30 @@
       No group photos uploaded yet. Upload prototype photos above.
     </div>
     {% endif %}
+  </div>
+</div>
+
+<!-- FULL VIEW PHOTO MODAL -->
+<div id="admin-photo-modal" style="display:none; position:fixed; inset:0; z-index:1000; background:rgba(0,0,0,0.8); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:16px;" onclick="closeAdminPhotoModal(event)">
+  <div style="background:var(--card-bg, #fff); max-width:700px; width:100%; border-radius:20px; padding:24px; box-shadow:0 20px 40px rgba(0,0,0,0.4); position:relative;" onclick="event.stopPropagation()">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <div>
+        <span id="admin-modal-palkhi-badge" style="background:rgba(232,112,58,0.1); color:var(--primary); font-weight:bold; font-size:0.8rem; padding:4px 10px; border-radius:20px;">HM-001</span>
+        <h3 id="admin-modal-caption" style="margin-top:4px; font-size:1.1rem; font-weight:bold;">Wari Moment</h3>
+      </div>
+      <button style="background:none; border:none; font-size:1.4rem; cursor:pointer;" onclick="closeAdminPhotoModal()">✕</button>
+    </div>
+
+    <div style="overflow:hidden; border-radius:12px; background:#000; display:flex; align-items:center; justify-content:center;">
+      <img id="admin-modal-img" src="" style="max-height:60vh; max-width:100%; object-fit:contain;">
+    </div>
+
+    <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center;">
+      <span style="font-size:0.8rem; color:var(--text-secondary);">🔒 Sacred Dindi Group Photo</span>
+      <a id="admin-modal-download-btn" href="#" class="btn btn-primary btn-sm" download>
+        📥 Download Photo
+      </a>
+    </div>
   </div>
 </div>
 
@@ -651,6 +672,24 @@
     }
   }
 
+  function openAdminPhotoModal(url, caption, palkhiId) {
+    const imgEl = document.getElementById('admin-modal-img');
+    const capEl = document.getElementById('admin-modal-caption');
+    const badgeEl = document.getElementById('admin-modal-palkhi-badge');
+    const dlBtn = document.getElementById('admin-modal-download-btn');
+    if (imgEl) imgEl.src = url;
+    if (capEl) capEl.textContent = caption || 'Wari Moment';
+    if (badgeEl) badgeEl.textContent = palkhiId || (typeof currentPalkhiId !== 'undefined' ? currentPalkhiId : 'HM-001');
+    if (dlBtn) dlBtn.href = url;
+    const modal = document.getElementById('admin-photo-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function closeAdminPhotoModal(e) {
+    const modal = document.getElementById('admin-photo-modal');
+    if (modal) modal.style.display = 'none';
+  }
+
   function renderPhotoGallery(photos) {
     const grid = document.getElementById('photos-grid');
     if (!photos || photos.length === 0) {
@@ -659,7 +698,7 @@
     }
 
     grid.innerHTML = photos.map(p => `
-      <div class="photo-thumb-card">
+      <div class="photo-thumb-card" style="cursor:pointer;" onclick="openAdminPhotoModal('${p.photo_url}', '${p.caption || ''}', '${p.palkhi_id || ''}')">
         <img src="${p.photo_url}" alt="${p.caption}" onerror="this.src='https://images.unsplash.com/photo-1544717305-2782549b5136?w=300&q=80'">
         <div class="photo-thumb-caption" title="${p.caption}">${p.caption}</div>
       </div>
@@ -694,7 +733,7 @@
         box.style.display = 'block';
         box.innerHTML = `
           <strong>🎉 ${data.message}</strong><br>
-          <span style="font-size:0.9rem;">You can now log in below using Palkhi ID: <strong>${data.palkhi_id}</strong> (Password: admin123)</span>
+          <span style="font-size:0.9rem;">You can now log in below using Palkhi ID: <strong>${data.palkhi_id}</strong></span>
         `;
         document.getElementById('register-dindi-form').reset();
         const loginInput = document.getElementById('login-palkhi-id-input');
