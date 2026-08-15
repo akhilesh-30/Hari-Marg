@@ -1682,31 +1682,61 @@ def api_admin_upload_photo():
 # ============================================
 # API: NEW FEATURE ENDPOINTS
 # ============================================
+# NOTE: Temporary decision - Family ID is derived from pattern (e.g., HMF-013 from HM-013) and is guessable if normal ID is known. Deferred fix is a random per-palki code, to be revisited later.
 @app.route('/api/track')
 def api_track_dindi():
-    """Public lookup: fetch tracking info for a Palkhi ID (no login required for basic tracking)."""
-    palkhi_id = normalize_palkhi_id(request.args.get('palkhi_id', ''))
-    if not palkhi_id:
-        return jsonify({'error': 'Palkhi ID required'}), 400
+    """Server-side Access Control: Fetch tracking info according to user role (Admin, Volunteer, Family, Guest)."""
+    raw_id = (request.args.get('palkhi_id') or request.args.get('family_id') or '').strip().upper()
+    search_q = (request.args.get('q') or '').strip()
+
+    if not raw_id:
+        return jsonify({'error': 'Palkhi ID or Family ID is required'}), 400
+
+    # Family ID resolution (e.g. HMF-013 -> HM-013)
+    is_family_id = False
+    base_palkhi_id = raw_id
+
+    if raw_id.startswith('HMF-'):
+        is_family_id = True
+        base_palkhi_id = 'HM-' + raw_id[4:]
+    else:
+        base_palkhi_id = normalize_palkhi_id(raw_id)
 
     conn = get_db()
-    dindi = conn.execute('SELECT * FROM dindis WHERE palkhi_id = ?', (palkhi_id,)).fetchone()
+    dindi = conn.execute('SELECT * FROM dindis WHERE palkhi_id = ?', (base_palkhi_id,)).fetchone()
     if not dindi:
         conn.close()
-        return jsonify({'error': 'Not found'}), 404
+        return jsonify({'error': f'Palkhi ID or Family ID "{raw_id}" not found'}), 404
 
-    # Access control check: Member roster and group photos are strictly restricted to the authenticated Palkhi Admin
-    is_admin = bool(session.get('admin_logged_in') and session.get('admin_palkhi_id') == palkhi_id)
+    # Determine user role permissions
+    is_admin = bool(session.get('admin_logged_in') and session.get('admin_palkhi_id') == base_palkhi_id)
+    is_volunteer = bool(session.get('user_role') == 'volunteer')
+    is_family = is_family_id
 
     photos = []
     members = []
-    if is_admin:
+
+    # Access Matrix Rule 1: Photo Gallery (Admin OR Family ID holder for own Palkhi only; Volunteer & Guest get NO photos)
+    if is_admin or is_family:
         photos = [dict(p) for p in conn.execute(
-            'SELECT * FROM dindi_photos WHERE palkhi_id = ? ORDER BY id DESC LIMIT 12', (palkhi_id,)
+            'SELECT * FROM dindi_photos WHERE palkhi_id = ? ORDER BY id DESC LIMIT 12', (base_palkhi_id,)
         ).fetchall()]
+
+    # Access Matrix Rule 2: Member Health Roster (Admin OR Volunteer for specific Palkhi ID only; Family & Guest get NO roster)
+    if is_admin:
         members = [dict(m) for m in conn.execute(
-            'SELECT name, age, health_note FROM dindi_members WHERE palkhi_id = ? ORDER BY id ASC', (palkhi_id,)
+            'SELECT name, age, health_note FROM dindi_members WHERE palkhi_id = ? ORDER BY id ASC', (base_palkhi_id,)
         ).fetchall()]
+    elif is_volunteer:
+        if search_q:
+            members = [dict(m) for m in conn.execute(
+                'SELECT name, age, health_note FROM dindi_members WHERE palkhi_id = ? AND name LIKE ? ORDER BY id ASC LIMIT 50',
+                (base_palkhi_id, f'%{search_q}%')
+            ).fetchall()]
+        else:
+            members = [dict(m) for m in conn.execute(
+                'SELECT name, age, health_note FROM dindi_members WHERE palkhi_id = ? ORDER BY id ASC', (base_palkhi_id,)
+            ).fetchall()]
 
     conn.close()
 
@@ -1717,7 +1747,14 @@ def api_track_dindi():
         'dindi': d,
         'photos': photos,
         'members': members,
-        'restricted': not is_admin
+        'user_role': 'admin' if is_admin else ('volunteer' if is_volunteer else ('family' if is_family else 'guest')),
+        'access_level': {
+            'has_photos': bool(photos or is_admin or is_family),
+            'has_members': bool(is_admin or is_volunteer),
+            'is_family': is_family,
+            'is_volunteer': is_volunteer,
+            'is_admin': is_admin
+        }
     })
 
 
