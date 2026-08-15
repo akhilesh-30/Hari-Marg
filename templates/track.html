@@ -16,10 +16,10 @@
     <!-- SEARCH INPUT CARD -->
     <div class="card p-6 sm:p-8">
       <label for="palkhi_id_input" class="mb-2 block font-sans text-sm sm:text-base font-semibold text-accent">
-        Enter Palkhi ID / दिंडी आयडी:
+        Enter Palkhi ID (e.g. HM-042) or Family Photo Code (e.g. HMF-042):
       </label>
       <div class="mb-4 flex flex-col sm:flex-row gap-3">
-        <input type="text" id="palkhi_id_input" class="w-full uppercase rounded-2xl border border-border bg-card px-5 py-3.5 font-sans text-lg font-medium text-foreground tracking-wider outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" placeholder="e.g. HM-042 or HM-001" onkeypress="if(event.key==='Enter')trackDindi()">
+        <input type="text" id="palkhi_id_input" class="w-full uppercase rounded-2xl border border-border bg-card px-5 py-3.5 font-sans text-lg font-medium text-foreground tracking-wider outline-none focus:border-primary focus:ring-2 focus:ring-primary/20" placeholder="e.g. HM-042 or Family Code HMF-042" onkeypress="if(event.key==='Enter')trackDindi()">
         <button class="inline-flex items-center justify-center gap-2 rounded-2xl bg-primary px-8 py-3.5 font-sans font-semibold text-primary-foreground shadow-md transition-all hover:brightness-105 active:scale-95" onclick="trackDindi()">
           🔍 Track
         </button>
@@ -28,9 +28,8 @@
       <!-- Quick Tap Sample Chips -->
       <div class="flex flex-wrap items-center gap-2">
         <span class="font-sans text-xs font-semibold text-muted-foreground uppercase tracking-wider">Samples:</span>
-        <button class="rounded-full border border-border bg-secondary px-3.5 py-1.5 font-sans text-xs font-medium text-secondary-foreground transition-all hover:border-primary hover:text-accent" onclick="quickTrack('HM-042')">HM-042</button>
-        <button class="rounded-full border border-border bg-secondary px-3.5 py-1.5 font-sans text-xs font-medium text-secondary-foreground transition-all hover:border-primary hover:text-accent" onclick="quickTrack('HM-001')">HM-001</button>
-        <button class="rounded-full border border-border bg-secondary px-3.5 py-1.5 font-sans text-xs font-medium text-secondary-foreground transition-all hover:border-primary hover:text-accent" onclick="quickTrack('HM-002')">HM-002</button>
+        <button class="rounded-full border border-border bg-secondary px-3.5 py-1.5 font-sans text-xs font-medium text-secondary-foreground transition-all hover:border-primary hover:text-accent" onclick="quickTrack('HM-042')">HM-042 (Palkhi)</button>
+        <button class="rounded-full border border-border bg-secondary px-3.5 py-1.5 font-sans text-xs font-medium text-secondary-foreground transition-all hover:border-primary hover:text-accent" onclick="quickTrack('HMF-042')">HMF-042 (Family Photos)</button>
       </div>
     </div>
 
@@ -267,38 +266,53 @@
         document.getElementById('r-map-link').classList.add('hidden');
       }
 
-      // Render members
+      // Render members & search input for volunteers/admins
       const membersContainer = document.getElementById('r-members-list');
-      if (data.members && data.members.length > 0) {
-        membersContainer.innerHTML = `
-          <div class="flex flex-col gap-2">
-            ${data.members.map(m => {
-              const isAlert = m.health_note && (m.health_note.includes('Diabetic') || m.health_note.includes('Blisters') || m.health_note.includes('Hypertension'));
-              return `
-                <div class="rounded-xl border border-border bg-secondary/30 p-3 text-sm">
-                  <div class="flex items-center justify-between">
-                    <strong class="text-accent">${m.name}</strong>
-                    <span class="text-xs text-muted-foreground">Age ${m.age || 'N/A'}</span>
+      const hasMembers = data.access_level ? data.access_level.has_members : (data.members && data.members.length > 0);
+      const isVolunteer = data.access_level ? data.access_level.is_volunteer : false;
+
+      if (hasMembers) {
+        let searchInputHtml = '';
+        if (isVolunteer) {
+          searchInputHtml = `
+            <div class="mb-3">
+              <input type="text" id="roster-search-input" class="w-full rounded-xl border border-border bg-card px-3.5 py-2 font-sans text-xs text-foreground outline-none focus:border-primary" placeholder="🔍 Search member name in Palkhi ${d.palkhi_id}..." oninput="filterVolunteerRoster(this.value)">
+            </div>
+          `;
+        }
+
+        if (data.members && data.members.length > 0) {
+          membersContainer.innerHTML = searchInputHtml + `
+            <div id="roster-items-grid" class="flex flex-col gap-2">
+              ${data.members.map(m => {
+                const isAlert = m.health_note && (m.health_note.includes('Diabetic') || m.health_note.includes('Blisters') || m.health_note.includes('Hypertension'));
+                return `
+                  <div class="member-roster-item rounded-xl border border-border bg-secondary/30 p-3 text-sm" data-name="${(m.name || '').toLowerCase()}">
+                    <div class="flex items-center justify-between">
+                      <strong class="text-accent">${m.name}</strong>
+                      <span class="text-xs text-muted-foreground">Age ${m.age || 'N/A'}</span>
+                    </div>
+                    <div class="mt-1 font-sans text-xs ${isAlert ? 'text-destructive font-semibold' : 'text-emerald-700'}">
+                      ${isAlert ? '⚠️ ' : '✔️ '}${m.health_note || 'Healthy'}
+                    </div>
                   </div>
-                  <div class="mt-1 font-sans text-xs ${isAlert ? 'text-destructive font-semibold' : 'text-emerald-700'}">
-                    ${isAlert ? '⚠️ ' : '✔️ '}${m.health_note || 'Healthy'}
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        `;
-      } else if (data.restricted) {
-        membersContainer.innerHTML = '<p class="text-sm text-muted-foreground">🔒 Member details are private to Palkhi Admin.</p>';
+                `;
+              }).join('')}
+            </div>
+          `;
+        } else {
+          membersContainer.innerHTML = searchInputHtml + '<p class="text-sm text-muted-foreground">No member health records found for this Palkhi.</p>';
+        }
       } else {
-        membersContainer.innerHTML = '<p class="text-sm text-muted-foreground">No member health records uploaded yet.</p>';
+        membersContainer.innerHTML = '<div class="rounded-xl border border-border bg-secondary/20 p-4 text-center font-sans text-xs text-muted-foreground">🔒 Health roster is restricted to verified Volunteers & Palkhi Admin.</div>';
       }
 
-      // Render photos
+      // Render photos for Family ID holders or Admin
       const photoContainer = document.getElementById('r-photos');
+      const hasPhotos = data.access_level ? data.access_level.has_photos : (data.photos && data.photos.length > 0);
       trackedPhotos = data.photos || [];
 
-      if (trackedPhotos && trackedPhotos.length > 0) {
+      if (hasPhotos && trackedPhotos.length > 0) {
         photoContainer.innerHTML = trackedPhotos.map((p, idx) => `
           <div class="group overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all hover:scale-[1.03] cursor-pointer" onclick="openTrackPhotoModal(${idx})">
             <div class="relative aspect-square w-full overflow-hidden bg-secondary">
@@ -312,10 +326,10 @@
             </div>
           </div>
         `).join('');
-      } else if (data.restricted) {
-        photoContainer.innerHTML = '<p class="col-span-full text-sm text-muted-foreground">🔒 Group photos are visible only to authorized Palkhi Admin.</p>';
+      } else if (!hasPhotos) {
+        photoContainer.innerHTML = '<div class="col-span-full rounded-2xl border border-border bg-secondary/20 p-6 text-center font-sans text-xs text-muted-foreground">🔒 Group photo gallery is private to authorized Family ID holders (e.g. HMF-042) & Palkhi Admin.</div>';
       } else {
-        photoContainer.innerHTML = '<p class="col-span-full text-sm text-muted-foreground">No group photos uploaded yet.</p>';
+        photoContainer.innerHTML = '<p class="col-span-full text-sm text-muted-foreground">No group photos uploaded yet for this Palkhi.</p>';
       }
 
       // Show result
@@ -326,6 +340,19 @@
       document.getElementById('tracker-error').classList.remove('hidden');
       document.getElementById('tracker-result').classList.add('hidden');
     }
+  }
+
+  function filterVolunteerRoster(q) {
+    const term = (q || '').trim().toLowerCase();
+    const items = document.querySelectorAll('.member-roster-item');
+    items.forEach(el => {
+      const name = el.getAttribute('data-name') || '';
+      if (!term || name.includes(term)) {
+        el.style.display = 'block';
+      } else {
+        el.style.display = 'none';
+      }
+    });
   }
 
   document.addEventListener('DOMContentLoaded', () => {
