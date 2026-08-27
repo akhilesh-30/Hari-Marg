@@ -52,13 +52,13 @@
     <!-- LEFT COLUMN: ADMIN & VOLUNTEER ROLE CARDS -->
     <div class="flex flex-col gap-6">
 
-      <!-- ROLE CARD 1: ADMIN LOGIN -->
+      <!-- ROLE CARD 1: PALKHI ADMIN PORTAL -->
       <div class="card p-6 sm:p-8 border-t-4 border-accent">
         <div class="flex items-center gap-3 mb-2">
           <span class="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xl text-accent">🔑</span>
           <div>
             <h3 class="font-serif text-xl font-bold text-accent">Palkhi Admin Portal</h3>
-            <span class="font-sans text-xs text-muted-foreground">Login only (No signup required)</span>
+            <span class="font-sans text-xs text-muted-foreground">Login or Register a new Dindi</span>
           </div>
         </div>
 
@@ -82,9 +82,14 @@
             <input type="password" name="password" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="Enter admin password" required>
           </div>
 
-          <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 font-sans font-semibold text-primary-foreground shadow-md transition-all hover:brightness-105">
-            🔑 Login to Admin Panel
-          </button>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <button type="submit" class="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 py-3.5 font-sans font-semibold text-primary-foreground shadow-md transition-all hover:brightness-105">
+              🔑 Login
+            </button>
+            <a href="/admin/register" class="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-primary/40 bg-secondary px-5 py-3.5 font-sans font-semibold text-accent transition-colors hover:bg-primary hover:text-white">
+              📝 Sign Up (New Dindi)
+            </a>
+          </div>
         </form>
       </div>
 
@@ -112,7 +117,7 @@
         <form id="vol-login-form" onsubmit="submitVolLogin(event)" class="flex flex-col gap-4">
           <div>
             <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Mobile Phone Number *</label>
-            <input type="tel" id="vol-login-phone" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="e.g. 9876543210" required>
+            <input type="tel" id="vol-login-phone" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="e.g. 9876543210" required pattern="[0-9]*" inputmode="numeric" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
           </div>
 
           <div>
@@ -134,17 +139,12 @@
 
           <div>
             <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Mobile Phone Number *</label>
-            <input type="tel" id="vol-reg-phone" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="e.g. 9876543210" required>
+            <input type="tel" id="vol-reg-phone" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="e.g. 9876543210" required pattern="[0-9]*" inputmode="numeric" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
           </div>
 
           <div>
             <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Set Passcode * (Min 4 digits)</label>
             <input type="password" id="vol-reg-passcode" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="Create a secure passcode" required minlength="4">
-          </div>
-
-          <div>
-            <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground">Verification Secret Code (Optional)</label>
-            <input type="text" id="vol-reg-secret" class="w-full uppercase rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="e.g. WARI-VOL-2026">
           </div>
 
           <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 font-sans font-semibold text-primary-foreground shadow-md transition-all hover:brightness-105">
@@ -181,12 +181,36 @@
 
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="mb-1 block font-sans text-xs font-bold text-muted-foreground">Start Point / प्रस्थान</label>
-                <input type="text" id="cert-input-start" class="w-full rounded-xl border border-border bg-card px-3 py-2 font-sans text-xs text-foreground outline-none focus:border-primary" placeholder="e.g. Alandi" value="Alandi">
+                <label class="mb-1 block font-sans text-xs font-bold text-muted-foreground">Start Point / प्रस्थान *</label>
+                <select id="cert-input-start" class="w-full rounded-xl border border-border bg-card px-3 py-2 font-sans text-xs text-foreground outline-none focus:border-primary">
+                  <option value="Alandi" selected>Alandi / आळंदी (Sant Dnyaneshwar)</option>
+                  <option value="Dehu">Dehu / देहू (Sant Tukaram)</option>
+                  <option value="Pune">Pune / पुणे</option>
+                  <option value="Hadapsar">Hadapsar / हडपसर</option>
+                  <option value="Saswad">Saswad / सासवड</option>
+                  <option value="Jejuri">Jejuri / जेजुरी</option>
+                  <option value="Walhe">Walhe / वाल्हे</option>
+                  <option value="Lonand">Lonand / लोणंद</option>
+                  <option value="Phaltan">Phaltan / फलटण</option>
+                  <option value="Wakhari">Wakhari / वाखारी</option>
+                  <option value="Pandharpur">Pandharpur / पंढरपूर</option>
+                </select>
               </div>
               <div>
-                <label class="mb-1 block font-sans text-xs font-bold text-muted-foreground">End Point / समाप्ती</label>
-                <input type="text" id="cert-input-end" class="w-full rounded-xl border border-border bg-card px-3 py-2 font-sans text-xs text-foreground outline-none focus:border-primary" placeholder="e.g. Pandharpur" value="Pandharpur">
+                <label class="mb-1 block font-sans text-xs font-bold text-muted-foreground">End Point / समाप्ती *</label>
+                <select id="cert-input-end" class="w-full rounded-xl border border-border bg-card px-3 py-2 font-sans text-xs text-foreground outline-none focus:border-primary">
+                  <option value="Alandi">Alandi / आळंदी</option>
+                  <option value="Dehu">Dehu / देहू</option>
+                  <option value="Pune">Pune / पुणे</option>
+                  <option value="Hadapsar">Hadapsar / हडपसर</option>
+                  <option value="Saswad">Saswad / सासवड</option>
+                  <option value="Jejuri">Jejuri / जेजुरी</option>
+                  <option value="Walhe">Walhe / वाल्हे</option>
+                  <option value="Lonand">Lonand / लोणंद</option>
+                  <option value="Phaltan">Phaltan / फलटण</option>
+                  <option value="Wakhari">Wakhari / वाखारी</option>
+                  <option value="Pandharpur" selected>Pandharpur / पंढरपूर</option>
+                </select>
               </div>
             </div>
 
@@ -222,13 +246,10 @@
           </p>
         </div>
 
-        <!-- ACTION BUTTONS -->
-        <div class="mt-4 flex flex-col sm:flex-row gap-3">
-          <button type="button" class="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 font-sans text-sm font-semibold text-primary-foreground shadow-md transition-all hover:brightness-105" onclick="downloadPdfDirect()">
+        <!-- ACTION BUTTON -->
+        <div class="mt-4">
+          <button type="button" class="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 font-sans text-sm font-semibold text-primary-foreground shadow-md transition-all hover:brightness-105" onclick="downloadPdfDirect()">
             📥 Download Official PDF
-          </button>
-          <button type="button" class="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-primary/30 bg-secondary px-6 py-3 font-sans text-sm font-semibold text-accent transition-colors hover:bg-primary hover:text-white" onclick="printCertificateHtml()">
-            🖨️ Print Certificate
           </button>
         </div>
       </div>
@@ -263,11 +284,18 @@
 
   async function submitVolLogin(e) {
     e.preventDefault();
-    const phone = document.getElementById('vol-login-phone').value.trim();
-    const passcode = document.getElementById('vol-login-passcode').value.trim();
+    const phoneInput = document.getElementById('vol-login-phone');
+    const passInput = document.getElementById('vol-login-passcode');
+    const phone = phoneInput.value.trim();
+    const passcode = passInput.value.trim();
+
+    phoneInput.classList.remove('border-destructive');
+    passInput.classList.remove('border-destructive');
 
     if (!phone || !passcode) {
-      if (window.HariMarg) HariMarg.showToast('Please enter phone number and passcode');
+      phoneInput.classList.add('border-destructive');
+      passInput.classList.add('border-destructive');
+      if (window.HariMarg) HariMarg.showToast('Incorrect phone number or password');
       return;
     }
 
@@ -284,10 +312,14 @@
         if (window.HariMarg) HariMarg.showToast('Logged in as Volunteer! Redirecting...');
         setTimeout(() => { window.location.href = '/'; }, 1000);
       } else {
-        if (window.HariMarg) HariMarg.showToast(data.error || 'Volunteer login failed');
+        phoneInput.classList.add('border-destructive');
+        passInput.classList.add('border-destructive');
+        if (window.HariMarg) HariMarg.showToast(data.error || 'Incorrect phone number or password');
       }
     } catch(err) {
-      if (window.HariMarg) HariMarg.showToast('Volunteer login error');
+      phoneInput.classList.add('border-destructive');
+      passInput.classList.add('border-destructive');
+      if (window.HariMarg) HariMarg.showToast('Incorrect phone number or password');
     }
   }
 
@@ -296,7 +328,6 @@
     const name = document.getElementById('vol-reg-name').value.trim();
     const phone = document.getElementById('vol-reg-phone').value.trim();
     const passcode = document.getElementById('vol-reg-passcode').value.trim();
-    const secret_code = document.getElementById('vol-reg-secret').value.trim();
 
     if (!name || !phone || !passcode) {
       if (window.HariMarg) HariMarg.showToast('Please fill required fields');
@@ -308,7 +339,7 @@
       const res = await fetch('/api/volunteer/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, passcode, secret_code })
+        body: JSON.stringify({ name, phone, passcode })
       });
       const data = await res.json();
 
@@ -368,42 +399,6 @@
     if (window.HariMarg) HariMarg.showToast('Preparing PDF download...');
     const url = `/api/certificate/pdf?name=${encodeURIComponent(name)}&starting_location=${encodeURIComponent(startLoc)}&ending_location=${encodeURIComponent(endLoc)}`;
     window.location.href = url;
-  }
-
-  function printCertificateHtml() {
-    const name = document.getElementById('cert-display-name').textContent.trim();
-    const startLoc = document.getElementById('cert-display-start').textContent.trim();
-    const endLoc = document.getElementById('cert-display-end').textContent.trim();
-
-    const printWin = window.open('', '_blank');
-    printWin.document.write(`
-      <html>
-      <head>
-        <title>Wari Pilgrimage Certificate - ${name}</title>
-        <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;700&display=swap" rel="stylesheet">
-        <style>
-          body { font-family: 'Mukta', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #FDF6EC; margin: 0; padding: 20px; }
-          .cert { background: linear-gradient(135deg, #FFF8F0, #FDF6EC); border: 4px solid #E8703A; border-radius: 20px; padding: 48px; text-align: center; max-width: 550px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-          .cert::before { content:''; position:absolute; inset:10px; border:2px solid #8B2E1F; border-radius:14px; pointer-events:none; }
-          .cert-title { font-size: 2rem; color: #8B2E1F; font-weight:700; margin-top:8px; }
-          .cert-name { font-size: 2.4rem; color: #E8703A; margin: 16px 0; font-weight:700; border-bottom: 2px solid #E8703A; padding-bottom: 8px; }
-          .cert-body { color: #7A5C46; font-size: 1.1rem; line-height: 1.8; }
-          .cert-footer { margin-top: 24px; font-size: 0.95rem; color: #8B2E1F; font-weight: 700; }
-        </style>
-      </head>
-      <body>
-        <div class="cert">
-          <div style="font-size:3rem;">🛕</div>
-          <div class="cert-title">वारी प्रमाणपत्र</div>
-          <div class="cert-body">This certifies that</div>
-          <div class="cert-name">${name}</div>
-          <div class="cert-body">has successfully participated in the sacred<br><strong>Ashadi Wari Pilgrimage 2026</strong><br>from <strong>${startLoc}</strong> to <strong>${endLoc}</strong></div>
-          <div class="cert-footer">जय हरी विठ्ठल! 🙏 पुण्यस्मरण!</div>
-        </div>
-        <script>setTimeout(() => { window.print(); window.close(); }, 500);<\/script>
-      </body>
-      </html>
-    `);
   }
 </script>
 {% endblock %}

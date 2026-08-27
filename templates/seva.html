@@ -32,7 +32,7 @@
 
           <div>
             <label class="mb-1 block font-sans text-xs font-bold uppercase tracking-wider text-muted-foreground" for="s_contact">Contact Phone *</label>
-            <input type="tel" id="s_contact" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="e.g. 9876543210" required>
+            <input type="tel" id="s_contact" class="w-full rounded-xl border border-border bg-card px-4 py-3 font-sans text-sm text-foreground outline-none focus:border-primary" placeholder="e.g. 9876543210" required pattern="[0-9]*" inputmode="numeric" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
           </div>
 
           <div>
@@ -90,9 +90,8 @@
           <h3 class="mb-3 font-serif text-base font-bold text-accent">Register New Volunteer</h3>
           <div class="flex flex-col gap-3">
             <input type="text" id="v_reg_name" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Full Name">
-            <input type="tel" id="v_reg_phone" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Phone Number">
+            <input type="tel" id="v_reg_phone" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Phone Number" pattern="[0-9]*" inputmode="numeric" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
             <input type="password" id="v_reg_pass" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Set Passcode">
-            <input type="text" id="v_reg_code" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Volunteer Code (e.g. WARI-VOL-2026)">
             <button class="rounded-xl bg-accent px-4 py-2.5 font-sans text-sm font-semibold text-accent-foreground shadow-sm hover:brightness-105" onclick="registerVolunteer()">
               Register Volunteer
             </button>
@@ -104,7 +103,7 @@
           <div>
             <h3 class="mb-3 font-serif text-base font-bold text-accent">Volunteer Login</h3>
             <div class="flex flex-col gap-3">
-              <input type="tel" id="v_login_phone" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Phone Number">
+              <input type="tel" id="v_login_phone" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Phone Number" pattern="[0-9]*" inputmode="numeric" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
               <input type="password" id="v_login_pass" class="rounded-xl border border-border bg-card px-4 py-2.5 font-sans text-sm outline-none focus:border-primary" placeholder="Passcode">
               <button class="rounded-xl bg-primary px-4 py-2.5 font-sans text-sm font-semibold text-primary-foreground shadow-sm hover:brightness-105" onclick="loginVolunteer()">
                 🔑 Login as Volunteer
@@ -328,7 +327,6 @@
     const name = document.getElementById('v_reg_name').value.trim();
     const phone = document.getElementById('v_reg_phone').value.trim();
     const passcode = document.getElementById('v_reg_pass').value.trim();
-    const secret_code = document.getElementById('v_reg_code').value.trim();
 
     if (!name || !phone || !passcode) {
       alert('Please enter your name, phone number, and passcode.');
@@ -339,7 +337,7 @@
       const res = await fetch('/api/volunteer/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, phone, passcode, secret_code })
+        body: JSON.stringify({ name, phone, passcode })
       });
       const data = await res.json();
 
@@ -357,12 +355,19 @@
   }
 
   async function loginVolunteer() {
-    const phone = document.getElementById('v_login_phone').value.trim();
-    const passcode = document.getElementById('v_login_pass').value.trim();
+    const phoneInput = document.getElementById('v_login_phone');
+    const passInput = document.getElementById('v_login_pass');
+    const phone = phoneInput.value.trim();
+    const passcode = passInput.value.trim();
     const msg = document.getElementById('v_auth_msg');
 
+    phoneInput.classList.remove('border-destructive');
+    passInput.classList.remove('border-destructive');
+
     if (!phone || !passcode) {
-      msg.textContent = 'Please enter your phone number and passcode.';
+      phoneInput.classList.add('border-destructive');
+      passInput.classList.add('border-destructive');
+      msg.textContent = 'Incorrect phone number or password';
       msg.classList.remove('hidden');
       return;
     }
@@ -383,11 +388,15 @@
         document.getElementById('vol-auth-status').innerHTML = `<span class="rounded-full bg-emerald-500/10 px-3.5 py-1 font-sans text-xs font-bold text-emerald-600">✓ Verified Volunteer: ${data.volunteer.name}</span>`;
         loadVolunteerPalkhis();
       } else {
-        msg.textContent = data.error || 'Invalid credentials or account pending approval.';
+        phoneInput.classList.add('border-destructive');
+        passInput.classList.add('border-destructive');
+        msg.textContent = data.error || 'Incorrect phone number or password';
         msg.classList.remove('hidden');
       }
     } catch(err) {
-      msg.textContent = 'Login failed.';
+      phoneInput.classList.add('border-destructive');
+      passInput.classList.add('border-destructive');
+      msg.textContent = 'Incorrect phone number or password';
       msg.classList.remove('hidden');
     }
   }
@@ -447,7 +456,7 @@
     container.innerHTML = '<span class="loading-spinner text-xs">Loading all Palkhi live locations...</span>';
 
     try {
-      const res = await fetch('/api/volunteer/palkhis');
+      const res = await fetch(`/api/volunteer/palkhis?_t=${Date.now()}`);
       const data = await res.json();
 
       if (!data.success || !data.dindis) {
