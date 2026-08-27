@@ -22,6 +22,17 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SESSION_SECRET_KEY') or 'hari-marg-session-key-fallback-2026'
 
+
+@app.after_request
+def add_no_cache_headers(response):
+    """Ensure all API endpoints return no-cache response headers so client pages get real-time live data."""
+    if request.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+    return response
+
+
 # --- Configuration ---
 OPENWEATHER_API_KEY = os.getenv('OPENWEATHER_API_KEY', '')
 GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
@@ -36,7 +47,23 @@ SUPABASE_URL = os.getenv('SUPABASE_URL', '')
 SUPABASE_SECRET_KEY = os.getenv('SUPABASE_SECRET_KEY', '')
 SUPABASE_STORAGE_BUCKET = os.getenv('SUPABASE_STORAGE_BUCKET', 'hari-marg-photos')
 POSTGRES_URL = os.getenv('DATABASE_URL', '')
-VOLUNTEER_SECRET_CODE = os.getenv('VOLUNTEER_SECRET_CODE', 'WARI-VOL-2026')
+COS_PASSWORD = os.getenv('COS_PASSWORD', 'cos123').strip()
+
+
+def is_cos():
+    """Check if current session is authenticated as Chief of Staff."""
+    return bool(session.get('user_role') == 'chief_of_staff' or session.get('cos_logged_in'))
+
+
+def has_admin_access(palkhi_id=None):
+    """Check if session has admin privileges for the given palkhi_id (or any palkhi_id if CoS)."""
+    if is_cos():
+        return True
+    if not session.get('admin_logged_in'):
+        return False
+    if palkhi_id:
+        return session.get('admin_palkhi_id') == palkhi_id
+    return True
 
 # Ensure required directories exist
 os.makedirs(AUDIO_DIR, exist_ok=True)
@@ -558,7 +585,7 @@ def api_nearby():
 
 
 # ============================================
-# API: WEATHER
+# API: WEATHER (work needs to be  done here)
 # ============================================
 @app.route('/api/weather')
 def api_weather():
@@ -1247,6 +1274,9 @@ def api_register_dindi():
     if not name or not contact:
         return jsonify({'error': 'Name and contact are required'}), 400
 
+    if not contact.isdigit():
+        return jsonify({'error': 'Contact number must contain digits only'}), 400
+
     try:
         conn = get_db()
         count = conn.execute('SELECT COUNT(*) FROM dindis').fetchone()[0]
@@ -1381,73 +1411,173 @@ def api_dindis_nearby():
     })
 
 
+# NOTE: Chief of Staff role uses a single shared credential (COS_PASSWORD in .env) with no per-person accountability. This is a known, accepted trade-off for organizing committee access.
+@app.route('/profile/cos-login', methods=['GET', 'POST'])
+def cos_login():
+    """Chief of Staff memorable route authentication (not linked in public UI navigation)."""
+    if request.method == 'POST':
+        data = request.form if request.form else (request.get_json() or {})
+        password = data.get('password', '').strip()
+
+        if not COS_PASSWORD:
+            return render_template('cos_login.html', error='Chief of Staff login disabled (COS_PASSWORD missing in .env)')
+
+        if password == COS_PASSWORD:
+            session.clear()
+            session['user_role'] = 'chief_of_staff'
+            session['cos_logged_in'] = True
+            session['admin_logged_in'] = True
+            session['admin_palkhi_id'] = 'ALL'
+            if request.is_json:
+                return jsonify({'success': True, 'message': 'Chief of Staff authenticated!'})
+            return redirect('/admin')
+        else:
+            return render_template('cos_login.html', error='Invalid Chief of Staff password')
+
+    return render_template('cos_login.html')
+
+
+@app.route('/api/cos/accounts', methods=['GET'])
+def api_cos_get_accounts():
+    """CoS Privilege: View all registered volunteer accounts and system status."""
+    if not is_cos():
+        return jsonify({'error': 'Unauthorized. Restricted to Chief of Staff.'}), 403
+
+    conn = get_db()
+    cursor = conn.cursor()
+    v_rows = cursor.execute('SELECT id, name, phone, status, created_at FROM volunteers ORDER BY id DESC').fetchall()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'volunteers': [dict(v) for v in v_rows]
+    })
+
+
+@app.route('/api/cos/accounts/revoke', methods=['POST'])
+def api_cos_revoke_account():
+    """CoS Privilege: Revoke or suspend a volunteer account."""
+    if not is_cos():
+        return jsonify({'error': 'Unauthorized. Restricted to Chief of Staff.'}), 403
+
+    data = request.get_json() or request.form or {}
+    vol_id = data.get('volunteer_id')
+
+    if not vol_id:
+        return jsonify({'error': 'Volunteer ID required'}), 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+    sql_up = 'UPDATE volunteers SET status = %s WHERE id = %s' if is_pg(conn) else 'UPDATE volunteers SET status = ? WHERE id = ?'
+    cursor.execute(sql_up, ('revoked', vol_id))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': f'Volunteer account #{vol_id} revoked successfully.'})
+
+
 # ============================================
-# PAGE ROUTE: ADMIN DASHBOARD (/admin)
+# PAGE ROUTES: ADMIN DASHBOARD, LOGIN & REGISTRATION FLOWS
 # ============================================
 @app.route('/admin', methods=['GET'])
 def admin_dashboard():
-    """Password-protected Dindi Admin Portal."""
-    is_authenticated = bool(session.get('admin_logged_in', False))
-    selected_palkhi_id = session.get('admin_palkhi_id', '') if is_authenticated else ''
+    """Password-protected Dindi Admin & Chief of Staff Working Dashboard."""
+    is_authenticated = bool(session.get('admin_logged_in', False) or is_cos())
+    if not is_authenticated:
+        return redirect('/admin/login')
+
+    requested_palkhi = request.args.get('palkhi_id', '').strip()
+    selected_palkhi_id = session.get('admin_palkhi_id', '')
+    if is_cos():
+        selected_palkhi_id = requested_palkhi or (session.get('cos_selected_palkhi_id') if session.get('cos_selected_palkhi_id') != 'ALL' else '') or selected_palkhi_id
+        if selected_palkhi_id == 'ALL' or not selected_palkhi_id:
+            selected_palkhi_id = ''
 
     conn = get_db()
     dindis = conn.execute('SELECT * FROM dindis ORDER BY id ASC').fetchall()
     dindis_list = [dict(d) for d in dindis]
 
+    if is_cos() and not selected_palkhi_id and dindis_list:
+        selected_palkhi_id = dindis_list[0]['palkhi_id']
+    
+    if is_cos():
+        session['cos_selected_palkhi_id'] = selected_palkhi_id
+
     dindi_data = None
     members_list = []
     photos_list = []
+    volunteers_list = []
 
-    if is_authenticated and selected_palkhi_id:
-        # Fetch current selected dindi
-        d_row = conn.execute('SELECT * FROM dindis WHERE palkhi_id = ?', (selected_palkhi_id,)).fetchone()
+    if selected_palkhi_id:
+        d_row = conn.execute('SELECT * FROM dindis WHERE palkhi_id = %s' if is_pg(conn) else 'SELECT * FROM dindis WHERE palkhi_id = ?', (selected_palkhi_id,)).fetchone()
         if not d_row and dindis_list:
-            d_row = conn.execute('SELECT * FROM dindis WHERE palkhi_id = ?', (dindis_list[0]['palkhi_id'],)).fetchone()
+            d_row = conn.execute('SELECT * FROM dindis WHERE palkhi_id = %s' if is_pg(conn) else 'SELECT * FROM dindis WHERE palkhi_id = ?', (dindis_list[0]['palkhi_id'],)).fetchone()
             selected_palkhi_id = dindis_list[0]['palkhi_id']
-            session['admin_palkhi_id'] = selected_palkhi_id
 
         if d_row:
             dindi_data = dict(d_row)
 
-        m_rows = conn.execute('SELECT * FROM dindi_members WHERE palkhi_id = ? ORDER BY id DESC', (selected_palkhi_id,)).fetchall()
+        m_rows = conn.execute('SELECT * FROM dindi_members WHERE palkhi_id = %s ORDER BY id DESC' if is_pg(conn) else 'SELECT * FROM dindi_members WHERE palkhi_id = ? ORDER BY id DESC', (selected_palkhi_id,)).fetchall()
         members_list = [dict(m) for m in m_rows]
 
-        p_rows = conn.execute('SELECT * FROM dindi_photos WHERE palkhi_id = ? ORDER BY id DESC', (selected_palkhi_id,)).fetchall()
+        p_rows = conn.execute('SELECT * FROM dindi_photos WHERE palkhi_id = %s ORDER BY id DESC' if is_pg(conn) else 'SELECT * FROM dindi_photos WHERE palkhi_id = ? ORDER BY id DESC', (selected_palkhi_id,)).fetchall()
         photos_list = [dict(p) for p in p_rows]
+
+    if is_cos():
+        v_rows = conn.execute('SELECT id, name, phone, status, created_at FROM volunteers ORDER BY id DESC').fetchall()
+        volunteers_list = [dict(v) for v in v_rows]
 
     conn.close()
 
     return render_template(
         'admin.html',
-        authenticated=is_authenticated,
+        flow='dashboard',
+        authenticated=True,
+        is_cos=is_cos(),
         dindis=dindis_list,
         selected_palkhi_id=selected_palkhi_id,
         dindi=dindi_data,
         members=members_list,
-        photos=photos_list
+        photos=photos_list,
+        volunteers=volunteers_list
     )
 
 
-@app.route('/admin/login', methods=['POST'])
-def admin_login():
-    """Authenticate Palkhi Admin using Palkhi ID + password from environment variables."""
-    data = request.form if request.form else (request.get_json() or {})
-    password = data.get('password', '').strip()
-    palkhi_id = normalize_palkhi_id(data.get('palkhi_id', ''))
+@app.route('/admin/register', methods=['GET'])
+def admin_register():
+    """Standalone Dindi Registration flow (shows ONLY Register New Dindi form)."""
+    conn = get_db()
+    dindis = conn.execute('SELECT * FROM dindis ORDER BY id ASC').fetchall()
+    dindis_list = [dict(d) for d in dindis]
+    conn.close()
+    return render_template('admin.html', flow='register', authenticated=False, dindis=dindis_list)
 
+
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Standalone Palkhi Admin Login flow (shows ONLY Login card)."""
     conn = get_db()
     dindis = conn.execute('SELECT * FROM dindis ORDER BY id ASC').fetchall()
     dindis_list = [dict(d) for d in dindis]
 
-    dindi_exists = conn.execute('SELECT id FROM dindis WHERE palkhi_id = ?', (palkhi_id,)).fetchone()
+    if request.method == 'GET':
+        preset_id = request.args.get('palkhi_id', '').strip()
+        conn.close()
+        return render_template('admin.html', flow='login', authenticated=False, dindis=dindis_list, preset_palkhi_id=preset_id)
+
+    data = request.form if request.form else (request.get_json() or {})
+    password = data.get('password', '').strip()
+    palkhi_id = normalize_palkhi_id(data.get('palkhi_id', ''))
+
+    dindi_exists = conn.execute('SELECT id FROM dindis WHERE palkhi_id = %s' if is_pg(conn) else 'SELECT id FROM dindis WHERE palkhi_id = ?', (palkhi_id,)).fetchone()
     conn.close()
 
     if not palkhi_id:
-        return render_template('admin.html', authenticated=False, dindis=dindis_list,
+        return render_template('admin.html', flow='login', authenticated=False, dindis=dindis_list,
                                error='Please enter your Palkhi ID (e.g. HM-042)')
 
     if not dindi_exists:
-        return render_template('admin.html', authenticated=False, dindis=dindis_list,
+        return render_template('admin.html', flow='login', authenticated=False, dindis=dindis_list,
                                error=f'Palkhi ID "{palkhi_id}" not found. Check your ID and try again.')
 
     if ADMIN_PASSWORD and password == ADMIN_PASSWORD:
@@ -1458,7 +1588,7 @@ def admin_login():
             return jsonify({'success': True, 'message': 'Login successful!', 'palkhi_id': palkhi_id})
         return redirect('/admin')
     else:
-        return render_template('admin.html', authenticated=False, dindis=dindis_list,
+        return render_template('admin.html', flow='login', authenticated=False, dindis=dindis_list,
                                error='Invalid admin password.')
 
 
@@ -1467,19 +1597,6 @@ def admin_logout():
     """Logout Dindi Admin and clear all session data."""
     session.clear()
     return redirect('/admin')
-
-
-@app.route('/api/admin/select_dindi', methods=['POST'])
-def api_admin_select_dindi():
-    """Switch active dindi in admin session."""
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Unauthorized'}), 401
-    data = request.get_json() or {}
-    palkhi_id = data.get('palkhi_id')
-    if palkhi_id:
-        session['admin_palkhi_id'] = palkhi_id
-        return jsonify({'success': True, 'palkhi_id': palkhi_id})
-    return jsonify({'error': 'Missing palkhi_id'}), 400
 
 
 @app.route('/api/admin/dindi/update', methods=['POST'])
@@ -1518,29 +1635,67 @@ def api_admin_update_dindi():
                 status_label_mr = f"विश्रांती — {current_halt_mr} येथे थोडा वेळ"
 
         conn = get_db()
-        conn.execute('''
+        curr_row = conn.execute('SELECT * FROM dindis WHERE palkhi_id = %s' if is_pg(conn) else 'SELECT * FROM dindis WHERE palkhi_id = ?', (palkhi_id,)).fetchone()
+
+        loc_changed = False
+        status_changed = False
+        headcount_changed = False
+
+        if curr_row:
+            c = dict(curr_row)
+            loc_changed = abs(float(c.get('lat') or 0) - lat) > 0.00001 or abs(float(c.get('lng') or 0) - lng) > 0.00001
+            status_changed = c.get('status') != status or c.get('current_halt') != current_halt or c.get('status_label') != status_label
+            headcount_changed = c.get('members') != members
+
+        now_iso = datetime.now().isoformat()
+        sql = '''
             UPDATE dindis SET
-                members = ?,
-                lat = ?,
-                lng = ?,
-                status = ?,
-                current_halt = ?,
-                current_halt_mr = ?,
-                next_destination = ?,
-                next_destination_mr = ?,
-                status_label = ?,
-                status_label_mr = ?,
-                last_updated = CURRENT_TIMESTAMP
+                members = %s, lat = %s, lng = %s, status = %s, current_halt = %s,
+                current_halt_mr = %s, next_destination = %s, next_destination_mr = %s,
+                status_label = %s, status_label_mr = %s, created_at = %s
+            WHERE palkhi_id = %s
+        ''' if is_pg(conn) else '''
+            UPDATE dindis SET
+                members = ?, lat = ?, lng = ?, status = ?, current_halt = ?,
+                current_halt_mr = ?, next_destination = ?, next_destination_mr = ?,
+                status_label = ?, status_label_mr = ?, created_at = ?
             WHERE palkhi_id = ?
-        ''', (
+        '''
+        conn.execute(sql, (
             members, lat, lng, status, current_halt, current_halt_mr,
             next_destination, next_destination_mr, status_label, status_label_mr,
-            palkhi_id
+            now_iso, palkhi_id
         ))
+
+        # Sync main_palkhi table if updating primary ceremonial Palkhi
+        if palkhi_id in ('HM-001', 'HM-042'):
+            try:
+                sql_mp = 'UPDATE main_palkhi SET current_location_name = %s, status = %s, lat = %s, lng = %s, last_updated = %s WHERE id = 1' if is_pg(conn) else 'UPDATE main_palkhi SET current_location_name = ?, status = ?, lat = ?, lng = ?, last_updated = ? WHERE id = 1'
+                conn.execute(sql_mp, (current_halt, status_label, lat, lng, now_iso))
+            except Exception as mp_err:
+                print(f'[Main Palkhi Sync Warning] {mp_err}')
+
         conn.commit()
         conn.close()
 
-        return jsonify({'message': f'Dindi {palkhi_id} updated successfully!', 'palkhi_id': palkhi_id})
+        if loc_changed and status_changed and headcount_changed:
+            msg = "Location, status & headcount updated!"
+        elif loc_changed and status_changed:
+            msg = "Location & status updated!"
+        elif loc_changed and headcount_changed:
+            msg = "Location & headcount updated!"
+        elif status_changed and headcount_changed:
+            msg = "Status & headcount updated!"
+        elif loc_changed:
+            msg = "Location updated!"
+        elif status_changed:
+            msg = "Status updated!"
+        elif headcount_changed:
+            msg = "Headcount updated!"
+        else:
+            msg = "Location & status saved!"
+
+        return jsonify({'message': msg, 'palkhi_id': palkhi_id, 'loc_changed': loc_changed, 'status_changed': status_changed, 'headcount_changed': headcount_changed})
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1548,7 +1703,7 @@ def api_admin_update_dindi():
 
 @app.route('/api/admin/members/add', methods=['POST'])
 def api_admin_add_member():
-    """Register a member under a Dindi."""
+    """Register an actively-affected health issue record under a Dindi (decoupled from headcount)."""
     if not session.get('admin_logged_in'):
         return jsonify({'error': 'Unauthorized'}), 401
 
@@ -1556,31 +1711,33 @@ def api_admin_add_member():
     palkhi_id = data.get('palkhi_id') or session.get('admin_palkhi_id')
     name = data.get('name', '').strip()
     age = data.get('age')
-    health_note = data.get('health_note', '').strip() or 'Healthy'
+    health_note = data.get('health_note', '').strip()
 
     if not palkhi_id or not name:
         return jsonify({'error': 'Palkhi ID and member name are required'}), 400
 
+    if not health_note or health_note.lower() == 'healthy':
+        return jsonify({'error': 'Please specify an active health condition or medical note (e.g. Diabetic, Hypertension, Blisters, Asthma)'}), 400
+
     try:
         age_int = int(age) if age else None
         conn = get_db()
-        conn.execute(
-            'INSERT INTO dindi_members (palkhi_id, name, age, health_note) VALUES (?, ?, ?, ?)',
-            (palkhi_id, name, age_int, health_note)
-        )
-        conn.execute('UPDATE dindis SET members = members + 1 WHERE palkhi_id = ?', (palkhi_id,))
+        sql_ins = 'INSERT INTO dindi_members (palkhi_id, name, age, health_note) VALUES (%s, %s, %s, %s)' if is_pg(conn) else 'INSERT INTO dindi_members (palkhi_id, name, age, health_note) VALUES (?, ?, ?, ?)'
+        conn.execute(sql_ins, (palkhi_id, name, age_int, health_note))
         conn.commit()
 
-        m_rows = conn.execute('SELECT * FROM dindi_members WHERE palkhi_id = ? ORDER BY id DESC', (palkhi_id,)).fetchall()
+        sql_sel = 'SELECT * FROM dindi_members WHERE palkhi_id = %s ORDER BY id DESC' if is_pg(conn) else 'SELECT * FROM dindi_members WHERE palkhi_id = ? ORDER BY id DESC'
+        m_rows = conn.execute(sql_sel, (palkhi_id,)).fetchall()
         members_list = [dict(m) for m in m_rows]
-        d_row = conn.execute('SELECT members FROM dindis WHERE palkhi_id = ?', (palkhi_id,)).fetchone()
-        new_headcount = d_row['members'] if d_row else 0
+        sql_dindi = 'SELECT members FROM dindis WHERE palkhi_id = %s' if is_pg(conn) else 'SELECT members FROM dindis WHERE palkhi_id = ?'
+        d_row = conn.execute(sql_dindi, (palkhi_id,)).fetchone()
+        current_headcount = d_row['members'] if d_row else 0
 
         conn.close()
         return jsonify({
-            'message': f'Member "{name}" registered successfully!',
+            'message': f'Health record for "{name}" added successfully!',
             'members': members_list,
-            'headcount': new_headcount
+            'headcount': current_headcount
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1588,7 +1745,7 @@ def api_admin_add_member():
 
 @app.route('/api/admin/members/delete', methods=['POST'])
 def api_admin_delete_member():
-    """Delete a registered member."""
+    """Delete a health roster record (decoupled from headcount)."""
     if not session.get('admin_logged_in'):
         return jsonify({'error': 'Unauthorized'}), 401
 
@@ -1601,18 +1758,19 @@ def api_admin_delete_member():
 
     try:
         conn = get_db()
-        conn.execute('DELETE FROM dindi_members WHERE id = ?', (member_id,))
-        if palkhi_id:
-            conn.execute('UPDATE dindis SET members = MAX(0, members - 1) WHERE palkhi_id = ?', (palkhi_id,))
+        sql_del = 'DELETE FROM dindi_members WHERE id = %s' if is_pg(conn) else 'DELETE FROM dindi_members WHERE id = ?'
+        conn.execute(sql_del, (member_id,))
         conn.commit()
 
-        m_rows = conn.execute('SELECT * FROM dindi_members WHERE palkhi_id = ? ORDER BY id DESC', (palkhi_id,)).fetchall()
+        sql_sel = 'SELECT * FROM dindi_members WHERE palkhi_id = %s ORDER BY id DESC' if is_pg(conn) else 'SELECT * FROM dindi_members WHERE palkhi_id = ? ORDER BY id DESC'
+        m_rows = conn.execute(sql_sel, (palkhi_id,)).fetchall()
         members_list = [dict(m) for m in m_rows]
-        d_row = conn.execute('SELECT members FROM dindis WHERE palkhi_id = ?', (palkhi_id,)).fetchone()
-        new_headcount = d_row['members'] if d_row else 0
+        sql_dindi = 'SELECT members FROM dindis WHERE palkhi_id = %s' if is_pg(conn) else 'SELECT members FROM dindis WHERE palkhi_id = ?'
+        d_row = conn.execute(sql_dindi, (palkhi_id,)).fetchone()
+        current_headcount = d_row['members'] if d_row else 0
         conn.close()
 
-        return jsonify({'message': 'Member removed', 'members': members_list, 'headcount': new_headcount})
+        return jsonify({'message': 'Health record removed', 'members': members_list, 'headcount': current_headcount})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1620,10 +1778,9 @@ def api_admin_delete_member():
 @app.route('/api/admin/upload_photo', methods=['POST'])
 def api_admin_upload_photo():
     """Upload a group photo for a Dindi to Supabase Storage CDN."""
-    if not session.get('admin_logged_in'):
-        return jsonify({'error': 'Unauthorized'}), 401
-
     palkhi_id = request.form.get('palkhi_id') or session.get('admin_palkhi_id')
+    if not has_admin_access(palkhi_id):
+        return jsonify({'error': 'Unauthorized'}), 401
     caption = request.form.get('caption', '').strip() or 'Wari Dindi Photo'
 
     if 'photo' not in request.files:
@@ -1679,6 +1836,77 @@ def api_admin_upload_photo():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/admin/delete_photo', methods=['POST'])
+def api_admin_delete_photo():
+    """Delete a Dindi group photo (both storage object and DB record), scoped to own dindi."""
+    data = request.get_json() or request.form or {}
+    photo_id = data.get('photo_id')
+
+    if not photo_id:
+        return jsonify({'error': 'Photo ID is required'}), 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    query_sql = 'SELECT * FROM dindi_photos WHERE id = %s' if is_pg(conn) else 'SELECT * FROM dindi_photos WHERE id = ?'
+    cursor.execute(query_sql, (photo_id,))
+    p_row = cursor.fetchone()
+
+    if not p_row:
+        conn.close()
+        return jsonify({'error': 'Photo not found'}), 404
+
+    photo = dict(p_row)
+
+    # Server-side security scoping check
+    if not has_admin_access(photo.get('palkhi_id')):
+        conn.close()
+        return jsonify({'error': 'Unauthorized. Cannot delete photo from another Dindi.'}), 403
+
+    admin_palkhi_id = photo.get('palkhi_id')
+    photo_url = photo.get('photo_url', '')
+
+    # 1. Remove storage object
+    if SUPABASE_URL and SUPABASE_SECRET_KEY and '/storage/v1/object/public/' in photo_url:
+        try:
+            filename = photo_url.split(f"/{SUPABASE_STORAGE_BUCKET}/")[-1]
+            import requests as req
+            del_url = f"{SUPABASE_URL}/storage/v1/object/{SUPABASE_STORAGE_BUCKET}/{filename}"
+            headers = {
+                'apikey': SUPABASE_SECRET_KEY,
+                'Authorization': f'Bearer {SUPABASE_SECRET_KEY}'
+            }
+            req.delete(del_url, headers=headers, timeout=10)
+        except Exception as st_err:
+            print(f'[Storage Warning] Supabase delete photo error: {st_err}')
+    elif photo_url.startswith('/static/uploads/photos/'):
+        filename = os.path.basename(photo_url)
+        local_path = os.path.join(UPLOAD_FOLDER, filename)
+        if os.path.exists(local_path):
+            try:
+                os.remove(local_path)
+            except Exception as loc_err:
+                print(f'[Local Storage Warning] Failed to remove local file: {loc_err}')
+
+    # 2. Remove DB record
+    del_sql = 'DELETE FROM dindi_photos WHERE id = %s AND palkhi_id = %s' if is_pg(conn) else 'DELETE FROM dindi_photos WHERE id = ? AND palkhi_id = ?'
+    cursor.execute(del_sql, (photo_id, admin_palkhi_id))
+    conn.commit()
+
+    # 3. Return remaining photos for the dindi
+    get_photos_sql = 'SELECT * FROM dindi_photos WHERE palkhi_id = %s ORDER BY id DESC' if is_pg(conn) else 'SELECT * FROM dindi_photos WHERE palkhi_id = ? ORDER BY id DESC'
+    cursor.execute(get_photos_sql, (admin_palkhi_id,))
+    p_rows = cursor.fetchall()
+    photos_list = [dict(p) for p in p_rows]
+    conn.close()
+
+    return jsonify({
+        'message': 'Photo deleted successfully!',
+        'photos': photos_list
+    })
+
+
+
 # ============================================
 # API: NEW FEATURE ENDPOINTS
 # ============================================
@@ -1703,14 +1931,14 @@ def api_track_dindi():
         base_palkhi_id = normalize_palkhi_id(raw_id)
 
     conn = get_db()
-    dindi = conn.execute('SELECT * FROM dindis WHERE palkhi_id = ?', (base_palkhi_id,)).fetchone()
+    dindi = conn.execute('SELECT * FROM dindis WHERE palkhi_id = %s' if is_pg(conn) else 'SELECT * FROM dindis WHERE palkhi_id = ?', (base_palkhi_id,)).fetchone()
     if not dindi:
         conn.close()
         return jsonify({'error': f'Palkhi ID or Family ID "{raw_id}" not found'}), 404
 
     # Determine user role permissions
-    is_admin = bool(session.get('admin_logged_in') and session.get('admin_palkhi_id') == base_palkhi_id)
-    is_volunteer = bool(session.get('user_role') == 'volunteer')
+    is_admin = has_admin_access(base_palkhi_id)
+    is_volunteer = bool(session.get('user_role') in ('volunteer', 'chief_of_staff'))
     is_family = is_family_id
 
     photos = []
@@ -1870,12 +2098,14 @@ def api_volunteer_register():
     name = (data.get('name') or '').strip()
     phone = (data.get('phone') or '').strip()
     passcode = (data.get('passcode') or '').strip()
-    secret_code = (data.get('secret_code') or '').strip().upper()
 
     if not name or not phone or not passcode:
         return jsonify({'success': False, 'error': 'Name, phone, and passcode are required'}), 400
 
-    status = 'approved' if (VOLUNTEER_SECRET_CODE and secret_code == VOLUNTEER_SECRET_CODE.upper()) or not secret_code else 'pending'
+    if not phone.isdigit():
+        return jsonify({'success': False, 'error': 'Phone number must contain digits only'}), 400
+
+    status = 'approved'
     passcode_hash = generate_password_hash(passcode)
 
     try:
@@ -1915,6 +2145,9 @@ def api_volunteer_login():
     if not phone or not passcode:
         return jsonify({'success': False, 'error': 'Phone and passcode are required'}), 400
 
+    if not phone.isdigit():
+        return jsonify({'success': False, 'error': 'Phone number must contain digits only'}), 400
+
     conn = get_db()
     cursor = conn.cursor()
     if is_pg(conn):
@@ -1925,12 +2158,12 @@ def api_volunteer_login():
     conn.close()
 
     if not v:
-        return jsonify({'success': False, 'error': 'Invalid phone or passcode'}), 401
+        return jsonify({'success': False, 'error': 'Incorrect phone number or password'}), 401
 
     vol = dict(v)
     pass_hash = vol.get('passcode_hash') or vol.get('passcode') or ''
     if not (check_password_hash(pass_hash, passcode) or pass_hash == passcode):
-        return jsonify({'success': False, 'error': 'Invalid phone or passcode'}), 401
+        return jsonify({'success': False, 'error': 'Incorrect phone number or password'}), 401
 
     vol = dict(v)
     if vol.get('status') != 'approved':
@@ -1963,7 +2196,7 @@ def api_volunteer_get_palkhis():
         return jsonify({'success': False, 'error': 'Unauthorized. Restricted to verified volunteers.'}), 401
 
     conn = get_db()
-    dindis = conn.execute('SELECT palkhi_id, name, leader, lat, lng, current_halt, status, status_label, members, last_updated FROM dindis ORDER BY id ASC').fetchall()
+    dindis = conn.execute('SELECT palkhi_id, name, leader, lat, lng, current_halt, status, status_label, members, created_at AS last_updated FROM dindis ORDER BY id ASC').fetchall()
     main_palkhi = conn.execute('SELECT * FROM main_palkhi WHERE id = 1').fetchone()
     conn.close()
 

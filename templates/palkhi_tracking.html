@@ -148,7 +148,9 @@
     try {
       let url = '/api/dindis';
       if (userLat && userLng) {
-        url += `?lat=${userLat}&lng=${userLng}`;
+        url += `?lat=${userLat}&lng=${userLng}&_t=${Date.now()}`;
+      } else {
+        url += `?_t=${Date.now()}`;
       }
       const res = await fetch(url);
       const data = await res.json();

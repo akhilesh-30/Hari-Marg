@@ -229,7 +229,7 @@
 
     try {
       if (window.HariMarg) HariMarg.showToast(`Fetching Palkhi ${rawId}...`);
-      const res = await fetch(`/api/track?palkhi_id=${encodeURIComponent(rawId)}`);
+      const res = await fetch(`/api/track?palkhi_id=${encodeURIComponent(rawId)}&_t=${Date.now()}`);
       const data = await res.json();
 
       if (data.error || !data.dindi) {

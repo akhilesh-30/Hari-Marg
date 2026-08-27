@@ -176,7 +176,7 @@
     mainMap.fitBounds(polyline.getBounds(), { padding: [30, 30] });
 
     try {
-      const res = await fetch('/api/main_palkhi');
+      const res = await fetch(`/api/main_palkhi?_t=${Date.now()}`);
       const data = await res.json();
       currentPalkhiData = data;
 
