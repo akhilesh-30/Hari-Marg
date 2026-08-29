@@ -1,56 +1,426 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hari Marg - Demo View</title>
-    <style>
-        body, html { margin: 0; padding: 0; height: 100%; background: #2c3e50; display: flex; justify-content: center; align-items: center; font-family: sans-serif; }
-        .phone-mockup {
-            width: 375px; 
-            height: 812px; 
-            background: #fff;
-            border-radius: 40px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5), inset 0 0 0 10px #111;
-            position: relative;
-            overflow: hidden;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hari Marg — Digital Wari Companion</title>
+  <meta name="description" content="Hari Marg — Your Digital Companion for the Wari Pilgrimage. Live Palkhi tracking, nearby facilities, weather alerts, and AI guidance.">
+
+  <!-- Google Fonts: Fraunces + Inter + Mukta -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..900&family=Inter:wght@300;400;500;600;700;800&family=Mukta:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            saffron: '#e8703a',
+            maroon: '#8b2e1f',
+            gold: '#d9a441',
+            background: '#fdf6ec',
+            foreground: '#4a1c14',
+            card: '#fffaf3',
+            'card-foreground': '#4a1c14',
+            primary: '#e8703a',
+            'primary-foreground': '#fdf6ec',
+            secondary: '#f6e7d5',
+            'secondary-foreground': '#8b2e1f',
+            muted: '#f2e6d6',
+            'muted-foreground': '#9a6a52',
+            accent: '#8b2e1f',
+            'accent-foreground': '#fdf6ec',
+            border: '#ecd9c3',
+            destructive: '#b03020',
+          },
+          fontFamily: {
+            serif: ['Fraunces', 'Georgia', 'serif'],
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            marathi: ['Mukta', 'sans-serif'],
+          }
         }
-        /* The Notch */
-        .phone-mockup::before {
-            content: '';
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 150px;
-            height: 25px;
-            background: #111;
-            border-bottom-left-radius: 15px;
-            border-bottom-right-radius: 15px;
-            z-index: 10;
-        }
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-            border-radius: 30px;
-        }
-        .demo-info {
-            position: absolute;
-            left: 50px;
-            color: #fff;
-        }
-    </style>
-</head>
-<body>
-    <div class="demo-info">
-        <h1>Hari Marg Demo</h1>
-        <p>Interactive mobile view.</p>
-        <p>Scan to view on your phone!</p>
-    </div>
+      }
+    }
+  </script>
+
+  <!-- Leaflet CSS & JS for Interactive Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    @keyframes hm-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    @keyframes hm-glow {
+      0%, 100% { opacity: 0.35; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.06); }
+    }
+    @keyframes hm-pulse-slow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.15); }
+    }
+    .hm-float { animation: hm-float 4s ease-in-out infinite; }
+    .hm-glow { animation: hm-glow 3.5s ease-in-out infinite; }
+    .hm-pulse { animation: hm-pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     
-    <div class="phone-mockup">
-        <iframe src="/"></iframe>
+    /* Custom Toast Notification */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .toast {
+      background: #8b2e1f;
+      color: #fdf6ec;
+      padding: 12px 20px;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      box-shadow: 0 10px 25px rgba(139, 46, 31, 0.25);
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-background text-foreground font-sans antialiased selection:bg-secondary selection:text-accent">
+
+  <!-- ================= HEADER ================= -->
+  <header class="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-md">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-8 py-3.5">
+      <!-- Logo -->
+      <a href="#" class="flex items-center gap-3 group">
+        <span aria-hidden="true" class="flex h-10 w-10 items-center justify-center rounded-full bg-accent font-serif text-lg font-bold text-accent-foreground shadow-md transition-transform group-hover:scale-105">
+          ॐ
+        </span>
+        <span class="font-serif text-2xl font-bold tracking-tight text-accent">Hari Marg</span>
+      </a>
+
+      <!-- Desktop Links -->
+      <nav class="hidden items-center gap-2 md:flex">
+        <a href="#hero" class="rounded-full bg-secondary px-4 py-2 text-sm font-semibold text-accent">Home</a>
+        <a href="#map-section" class="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary/60 hover:text-accent transition-colors">Wari Route</a>
+        <a href="#features" class="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-secondary/60 hover:text-accent transition-colors">Key Features</a>
+      </nav>
+
+      <!-- Badge & Action -->
+      <div class="flex items-center gap-3">
+        <span class="rounded-full border border-primary/30 bg-secondary px-3.5 py-1.5 text-xs font-semibold tracking-wide text-secondary-foreground">
+          Wari 2026
+        </span>
+        <button onclick="showToast('📌 Welcome to Hari Marg Digital Companion')" class="flex h-9 w-9 items-center justify-center rounded-full bg-secondary text-accent hover:bg-primary hover:text-primary-foreground transition-all" title="Info">
+          ℹ️
+        </button>
+      </div>
     </div>
+  </header>
+
+  <!-- ================= HERO SECTION ================= -->
+  <section id="hero" class="relative overflow-hidden py-12 lg:py-16">
+    <div class="mx-auto grid max-w-6xl items-center gap-12 px-4 sm:px-8 lg:grid-cols-2">
+      
+      <!-- Left Column -->
+      <div class="text-center lg:text-left">
+        <p class="mb-3 font-sans text-sm font-semibold uppercase tracking-[0.3em] text-accent">
+          ॥ विठ्ठल विठ्ठल ॥
+        </p>
+        <h1 class="font-serif text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight text-accent">
+          Hari Marg
+          <span class="mt-2 block text-2xl sm:text-3xl text-primary">Your Digital Wari Companion</span>
+        </h1>
+        <p class="mt-5 max-w-xl text-base sm:text-lg leading-relaxed text-muted-foreground">
+          Walk the sacred road to Pandharpur with confidence — live palkhi routes, nearby seva stops, and weather along the way.
+        </p>
+
+        <!-- CTA Buttons -->
+        <div class="mt-8 flex flex-col items-center gap-4 sm:flex-row lg:justify-start">
+          <button type="button" onclick="handleFetchLocation()" id="fetch-btn" class="group relative inline-flex items-center gap-3 rounded-full bg-primary px-7 py-3.5 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:brightness-105 active:scale-95">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span id="fetch-btn-text">Fetch My Location</span>
+          </button>
+
+          <a href="#map-section" class="inline-flex items-center gap-2 rounded-full border border-accent/30 px-6 py-3.5 text-base font-semibold text-accent hover:bg-secondary transition-colors">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>
+            <span>Explore Route</span>
+          </a>
+        </div>
+        <div id="location-status" class="mt-3 text-sm font-medium text-accent min-h-[24px]"></div>
+
+        <!-- Quick Stats -->
+        <dl class="mt-10 grid max-w-lg grid-cols-3 gap-4 border-t border-border pt-6">
+          <div>
+            <dt class="font-serif text-2xl sm:text-3xl font-bold text-primary">250 km</dt>
+            <dd class="mt-0.5 text-xs sm:text-sm text-muted-foreground">Sacred Route</dd>
+          </div>
+          <div>
+            <dt class="font-serif text-2xl sm:text-3xl font-bold text-primary">21 Days</dt>
+            <dd class="mt-0.5 text-xs sm:text-sm text-muted-foreground">Traditional Wari</dd>
+          </div>
+          <div>
+            <dt class="font-serif text-2xl sm:text-3xl font-bold text-primary">9 Lakh+</dt>
+            <dd class="mt-0.5 text-xs sm:text-sm text-muted-foreground">Warkaris Walking</dd>
+          </div>
+        </dl>
+      </div>
+
+      <!-- Right Column: Deity Image Circle & Floating Chips -->
+      <div class="relative mx-auto flex h-[24rem] w-[24rem] max-w-full items-center justify-center">
+        <div class="hm-glow absolute inset-4 rounded-full bg-primary/25 blur-2xl"></div>
+        <div class="hm-float relative flex h-[20rem] w-[20rem] items-center justify-center overflow-hidden rounded-full border-[6px] border-accent/70 bg-secondary shadow-2xl">
+          <div class="text-center p-6">
+            <span class="text-7xl block mb-2">🚩</span>
+            <span class="font-serif text-2xl font-bold text-accent">Shri Vitthal</span>
+            <p class="text-xs text-muted-foreground mt-1">Pandharpur Wari 2026</p>
+          </div>
+        </div>
+
+        <!-- Floating Chips -->
+        <div class="absolute left-0 top-8 flex items-center gap-2.5 rounded-2xl border border-border bg-card/95 px-4 py-2.5 shadow-lg backdrop-blur-sm">
+          <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary text-accent text-sm">📍</span>
+          <div class="text-left">
+            <p class="text-[11px] text-muted-foreground">Next stop</p>
+            <p class="text-xs font-semibold text-foreground">Wakhari • 4 km</p>
+          </div>
+        </div>
+
+        <div class="absolute bottom-8 right-0 flex items-center gap-2.5 rounded-2xl border border-border bg-card/95 px-4 py-2.5 shadow-lg backdrop-blur-sm">
+          <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-secondary text-accent text-sm">🌤️</span>
+          <div class="text-left">
+            <p class="text-[11px] text-muted-foreground">Weather Today</p>
+            <p class="text-xs font-semibold text-foreground">28°C • Light Rain</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= PALKHI ROUTE MAP SECTION ================= -->
+  <section id="map-section" class="mx-auto max-w-6xl px-4 sm:px-8 mb-16">
+    <div class="overflow-hidden rounded-3xl border border-border bg-card shadow-lg">
+      
+      <!-- Card Header -->
+      <div class="flex flex-wrap items-center justify-between gap-4 border-b border-border/70 px-6 py-4">
+        <div class="flex items-center gap-3">
+          <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary text-xl">🗺️</span>
+          <div>
+            <h2 class="font-serif text-xl font-bold text-accent">Pandharpur Wari Interactive Map</h2>
+            <p class="text-xs text-muted-foreground">Live Palkhi route path & interactive coordinates</p>
+          </div>
+        </div>
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive">
+          <span class="h-2 w-2 rounded-full bg-destructive hm-pulse"></span> LIVE ROUTE
+        </span>
+      </div>
+
+      <!-- Palkhi Banner -->
+      <div class="mx-6 my-4 flex items-center justify-between rounded-2xl bg-secondary/70 p-4 border border-border">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">🚩</span>
+          <div>
+            <h4 class="font-semibold text-foreground text-sm">Shri Sant Dnyaneshwar Maharaj Palkhi</h4>
+            <p class="text-xs text-muted-foreground" id="palkhi-status-txt">Currently near Pune • Day 3 of Wari</p>
+          </div>
+        </div>
+        <button onclick="showToast('📢 Playing Devotional Announcement Audio')" class="rounded-full bg-primary/10 px-3.5 py-1.5 text-xs font-medium text-accent hover:bg-primary hover:text-white transition-colors">
+          📢 Listen
+        </button>
+      </div>
+
+      <!-- Leaflet Map Container -->
+      <div class="h-[340px] w-full relative">
+        <div id="preview-map" class="h-full w-full"></div>
+      </div>
+
+      <p class="py-3 text-center text-xs italic text-muted-foreground">
+        📍 Click anywhere on the map to interact and update location!
+      </p>
+    </div>
+  </section>
+
+  <!-- ================= FEATURES GRID ================= -->
+  <section id="features" class="mx-auto max-w-6xl px-4 sm:px-8 pb-20">
+    <div class="mb-10 text-center">
+      <h2 class="font-serif text-3xl sm:text-4xl font-bold text-accent">Key Wari Features</h2>
+      <p class="mt-2 text-sm text-muted-foreground">Essential tools from the Hari Marg ecosystem for Warkaris.</p>
+    </div>
+
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      
+      <!-- Feature 1 -->
+      <div onclick="showToast('🗺️ Viewing Wari Route Details')" class="cursor-pointer group flex flex-col items-start gap-4 rounded-3xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl">
+        <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-accent group-hover:bg-primary group-hover:text-white transition-colors text-xl">
+          🗺️
+        </span>
+        <h3 class="font-serif text-lg font-bold text-accent">Wari Route</h3>
+        <p class="text-xs leading-relaxed text-muted-foreground">Follow live palkhi path from Alandi & Dehu all the way to Pandharpur.</p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div onclick="showToast('📍 Searching Nearby Seva & Facilities')" class="cursor-pointer group flex flex-col items-start gap-4 rounded-3xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl">
+        <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-accent group-hover:bg-primary group-hover:text-white transition-colors text-xl">
+          🎪
+        </span>
+        <h3 class="font-serif text-lg font-bold text-accent">Near Me Seva</h3>
+        <p class="text-xs leading-relaxed text-muted-foreground">Locate free food (Annachhatra), drinking water, and medical rest stops.</p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div onclick="showToast('🌤️ Checking Weather Alerts')" class="cursor-pointer group flex flex-col items-start gap-4 rounded-3xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl">
+        <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-accent group-hover:bg-primary group-hover:text-white transition-colors text-xl">
+          🌦️
+        </span>
+        <h3 class="font-serif text-lg font-bold text-accent">Monsoon Weather</h3>
+        <p class="text-xs leading-relaxed text-muted-foreground">Rain forecasts, temperature tracking and monsoon alerts along the route.</p>
+      </div>
+
+      <!-- Feature 4 -->
+      <div onclick="showToast('🚨 AI Emergency Protocol Triggered')" class="cursor-pointer group flex flex-col items-start gap-4 rounded-3xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl">
+        <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-accent group-hover:bg-primary group-hover:text-white transition-colors text-xl">
+          🚨
+        </span>
+        <h3 class="font-serif text-lg font-bold text-accent">Emergency SOS</h3>
+        <p class="text-xs leading-relaxed text-muted-foreground">1-tap emergency assistance for heatstroke, exhaustion, and medical aid.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="border-t border-border bg-secondary/40 py-8">
+    <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-8 sm:flex-row">
+      <div class="flex items-center gap-2">
+        <span class="flex h-7 w-7 items-center justify-center rounded-full bg-accent font-serif text-xs font-bold text-accent-foreground">ॐ</span>
+        <span class="font-serif text-base font-bold text-accent">Hari Marg</span>
+      </div>
+      <p class="text-xs text-muted-foreground">
+        Made with devotion for the Warkari sangha · Pandharpur Wari
+      </p>
+    </div>
+  </footer>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Interactive JavaScript (Pure Client-side) -->
+  <script>
+    // Toast notification handler
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = msg;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Geolocation handler
+    function handleFetchLocation() {
+      const btnText = document.getElementById('fetch-btn-text');
+      const statusDiv = document.getElementById('location-status');
+      btnText.textContent = 'Locating...';
+      statusDiv.textContent = 'Requesting browser location...';
+
+      if (!navigator.geolocation) {
+        statusDiv.textContent = '⚠️ Geolocation not supported by browser.';
+        btnText.textContent = 'Fetch My Location';
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude.toFixed(4);
+          const lng = pos.coords.longitude.toFixed(4);
+          btnText.textContent = 'Location Found!';
+          statusDiv.textContent = `📍 Your Location: ${lat}°, ${lng}°`;
+          showToast(`📍 Found coordinates: ${lat}, ${lng}`);
+          if (mapInstance && userMarker) {
+            userMarker.setLatLng([pos.coords.latitude, pos.coords.longitude]);
+            mapInstance.flyTo([pos.coords.latitude, pos.coords.longitude], 10);
+          }
+        },
+        (err) => {
+          btnText.textContent = 'Fetch My Location';
+          statusDiv.textContent = '⚠️ Permission denied or unavailable. Click map to set manually.';
+          showToast('⚠️ Geolocation access standard popup closed');
+        }
+      );
+    }
+
+    // Map Initialization
+    let mapInstance = null;
+    let userMarker = null;
+
+    const wariStops = [
+      { name: "Alandi 🚩", lat: 18.6786, lng: 73.8998 },
+      { name: "Pune", lat: 18.5204, lng: 73.8567 },
+      { name: "Saswad", lat: 18.3419, lng: 74.0198 },
+      { name: "Jejuri", lat: 18.2764, lng: 74.1614 },
+      { name: "Lonand", lat: 17.9333, lng: 74.1500 },
+      { name: "Phaltan", lat: 17.9922, lng: 74.4306 },
+      { name: "Pandharpur 🛕", lat: 17.6792, lng: 75.3317 }
+    ];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Create map
+      mapInstance = L.map('preview-map', { center: [18.2, 74.5], zoom: 8 });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(mapInstance);
+
+      // Route polyline
+      const lineCoords = wariStops.map(s => [s.lat, s.lng]);
+      const polyline = L.polyline(lineCoords, { color: '#e8703a', weight: 4, opacity: 0.8, dashArray: '6, 6' }).addTo(mapInstance);
+
+      // Route markers
+      wariStops.forEach((stop, idx) => {
+        const isEnd = idx === 0 || idx === wariStops.length - 1;
+        L.marker([stop.lat, stop.lng], {
+          icon: L.divIcon({
+            html: `<div style="background:white;border:2px solid ${isEnd ? '#8b2e1f' : '#e8703a'};border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,0.2);">${isEnd ? (idx===0?'🚩':'🛕') : '📍'}</div>`,
+            className: '',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+          })
+        }).addTo(mapInstance).bindPopup(`<strong>${stop.name}</strong>`);
+      });
+
+      // Default user marker
+      userMarker = L.marker([18.5204, 73.8567], {
+        icon: L.divIcon({
+          html: `<div style="width:20px;height:20px;background:#e8703a;border:3px solid white;border-radius:50%;box-shadow:0 0 12px rgba(232,112,58,0.8);"></div>`,
+          className: '',
+          iconSize: [20, 20],
+          iconAnchor: [10, 10]
+        })
+      }).addTo(mapInstance).bindPopup("📍 Selected Location");
+
+      // Fit bounds
+      mapInstance.fitBounds(polyline.getBounds(), { padding: [25, 25] });
+
+      // Click to set location
+      mapInstance.on('click', (e) => {
+        const { lat, lng } = e.latlng;
+        userMarker.setLatLng([lat, lng]);
+        document.getElementById('location-status').textContent = `📍 Location set: ${lat.toFixed(4)}°, ${lng.toFixed(4)}°`;
+        showToast(`Location set to ${lat.toFixed(3)}°, ${lng.toFixed(3)}°`);
+      });
+    });
+  </script>
 </body>
 </html>

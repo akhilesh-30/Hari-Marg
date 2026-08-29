@@ -11,7 +11,7 @@ from datetime import datetime
 from io import BytesIO
 
 from flask import (
-    Flask, render_template, request, jsonify, send_file, session, redirect, url_for
+    Flask, render_template, request, jsonify, send_file, send_from_directory, session, redirect, url_for
 )
 from dotenv import load_dotenv
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -423,6 +423,13 @@ def get_dindis_from_db(user_lat=None, user_lng=None):
 # ============================================
 # PAGE ROUTES
 # ============================================
+@app.route('/manifest.json')
+@app.route('/static/manifest.json')
+def serve_manifest():
+    """Serve PWA manifest with application/manifest+json MIME type."""
+    return send_from_directory(os.path.join(app.root_path, 'static'), 'manifest.json', mimetype='application/manifest+json')
+
+
 @app.route('/')
 def home():
     """Home / Dashboard page."""
