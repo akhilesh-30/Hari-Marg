@@ -3,3 +3,4 @@ requests
 python-dotenv
 gtts
 reportlab
+gunicorn
