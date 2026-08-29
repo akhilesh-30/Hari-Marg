@@ -4,3 +4,4 @@ python-dotenv
 gtts
 reportlab
 gunicorn
+psycopg2-binary
